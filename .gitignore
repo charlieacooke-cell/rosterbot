@@ -1,0 +1,17 @@
+# Keep the roster CSV off GitHub — it has colleagues' personal shift data
+*.csv
+*.xlsx
+*.xls
+~$*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
