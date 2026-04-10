@@ -694,9 +694,10 @@ function lookupDate() {
   const type  = info ? info.type : 'off';
   const fd    = friendlyDate(input);
 
+  const hrs = (info && (type === 'night' || type === 'day')) ? ` · ${shiftHoursStr(info.code, type)}` : '';
   const themes = {
-    night:  { bg:'#e8eaf6', color:'#1a237e', text:`🌙 Yes — ${info?.label || 'Night Shift'}` },
-    day:    { bg:'#fff3e0', color:'#e65100', text:`☀️ Yes — ${info?.label || 'Day Shift'}` },
+    night:  { bg:'#e8eaf6', color:'#1a237e', text:`🌙 Yes — ${info?.label || 'Night Shift'}${hrs}` },
+    day:    { bg:'#fff3e0', color:'#e65100', text:`☀️ Yes — ${info?.label || 'Day Shift'}${hrs}` },
     relief: { bg:'#fdf6e3', color:'#92610a', text:`📟 On Sick Relief — not a scheduled shift` },
     off:    { bg:'#f0fff4', color:'#276749', text:`✅ No — Charlie is off` },
   };
