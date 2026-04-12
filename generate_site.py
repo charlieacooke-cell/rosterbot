@@ -38,7 +38,7 @@ OUTPUT_ICS  = "shifts.ics"
 # Site appearance
 SITE_TITLE    = "Is Charlie Working?"
 PERSON_NAME   = "Charlie"
-PERSON_EMOJI  = "👨‍⚕️"
+PERSON_EMOJI  = "🩺"
 
 # Per-shift hours as (start, end) in decimal 24hr — e.g. 8.5 = 08:30, 20.5 = 20:30
 # Night shifts: end time is next morning, so end < start
@@ -397,9 +397,25 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .cal-day.night      { background: #1a237e; color: #fff; }
     .cal-day.day        { background: #fff3e0; color: #e65100; }
     .cal-day.relief     { background: #fdf6e3; color: #92610a; border: 1px solid #f6d860; }
-    .cal-day.today-ring { outline: 3px solid #667eea; outline-offset: 1px; }
+    .cal-day.today-ring    { outline: 3px solid #667eea; outline-offset: 1px; }
+    .cal-day.selected-ring { outline: 3px solid #f6ad55; outline-offset: 1px; }
     .cal-day .day-num   { font-weight: 700; line-height: 1; }
     .cal-day .day-dot   { font-size: .6rem; line-height: 1; }
+
+    /* ── BACK TO NOW ── */
+    .back-to-now-btn {
+      margin-top: .8rem;
+      background: rgba(0,0,0,.12);
+      border: 1px solid rgba(0,0,0,.15);
+      color: inherit;
+      border-radius: 20px;
+      padding: .3rem .9rem;
+      font-size: .8rem;
+      cursor: pointer;
+      font-weight: 600;
+      opacity: .75;
+    }
+    .back-to-now-btn:hover { opacity: 1; }
 
     /* ── CALENDAR SUBSCRIPTION ── */
     .sub-card {
@@ -470,6 +486,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <div class="status-answer" id="status-answer">Loading…</div>
       <div class="status-shift" id="status-shift"></div>
       <div class="status-sub" id="status-sub"></div>
+      <button class="back-to-now-btn" id="back-to-now" onclick="resetToNow()" style="display:none">← Back to now</button>
     </div>
 
     <!-- NEXT SHIFT -->
@@ -480,16 +497,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <div class="next-info" id="next-info"></div>
         <div class="next-sub" id="next-sub"></div>
       </div>
-    </div>
-
-    <!-- DATE LOOKUP -->
-    <div class="lookup-card">
-      <h2>🔍 Look up a date</h2>
-      <div class="lookup-row">
-        <input type="date" id="lookup-input" />
-        <button onclick="lookupDate()">Check</button>
-      </div>
-      <div id="lookup-result"></div>
     </div>
 
     <!-- CALENDAR -->
@@ -510,6 +517,16 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <div class="leg-item"><div class="leg-dot leg-relief"></div>Sick Relief</div>
         <div class="leg-item"><div class="leg-dot leg-off"></div>Off</div>
       </div>
+    </div>
+
+    <!-- DATE LOOKUP -->
+    <div class="lookup-card">
+      <h2>🔍 Look up a date</h2>
+      <div class="lookup-row">
+        <input type="date" id="lookup-input" />
+        <button onclick="lookupDate()">Check</button>
+      </div>
+      <div id="lookup-result"></div>
     </div>
 
     <!-- CALENDAR SUBSCRIPTION -->
@@ -642,9 +659,15 @@ function updateStatus() {
     if (hour >= nStart) {
       setStatus('🌙', 'Yes', 'Charlie is at work right now',
         `${info.label} · until ${fmtHour(nEnd)} tomorrow`, 'night');
-    } else {
+    } else if (hour >= 10 && hour < 17) {
+      setStatus('😴', 'Sleeping', 'Charlie should be resting right now',
+        `Night shift starts at ${fmtHour(nStart)}`, 'night');
+    } else if (hour >= 17) {
       setStatus('🌙', 'Tonight', `Charlie starts work at ${fmtHour(nStart)}`,
         info.label, 'night');
+    } else {
+      setStatus('🌙', 'Off', 'Charlie is between night shifts',
+        `Night shift starts at ${fmtHour(nStart)}`, 'night');
     }
   } else if (type === 'day') {
     const [dStart, dEnd] = getHours(info.code, 'day');
@@ -662,7 +685,7 @@ function updateStatus() {
     setStatus('📟', 'On Sick Relief', 'Available to cover if needed',
       'Not a scheduled shift — covering for sick colleagues', 'relief');
   } else {
-    setStatus('💤', 'No', 'Charlie is not working today', '', 'off');
+    setStatus('✅', 'No', 'Charlie is not working today', '', 'off');
   }
 }
 
@@ -742,7 +765,7 @@ function renderCalendar(year, month) {
     const type = info ? info.type : 'off';
     const tip  = info ? info.label : 'No shift';
     const isToday = iso === todayISO ? ' today-ring' : '';
-    const dot  = info ? `<div class="day-dot">${shiftEmoji(type)}</div>` : '';
+    const dot  = (info && type !== 'off') ? `<div class="day-dot">${shiftEmoji(type)}</div>` : '';
     html += `<div class="cal-day ${type}${isToday}" data-iso="${iso}" data-tip="${tip}" onclick="calClick('${iso}')">
                <div class="day-num">${d}</div>${dot}
              </div>`;
@@ -764,10 +787,51 @@ function renderCalendar(year, month) {
   });
 }
 
+let calSelected = null;
+
 function calClick(iso) {
-  document.getElementById('lookup-input').value = iso;
-  lookupDate();
-  document.getElementById('lookup-input').scrollIntoView({ behavior:'smooth', block:'center' });
+  const todayISO = toISO(new Date());
+  // Update selected highlight
+  document.querySelectorAll('.cal-day.selected-ring').forEach(el => el.classList.remove('selected-ring'));
+  if (iso !== todayISO) {
+    document.querySelector(`[data-iso="${iso}"]`)?.classList.add('selected-ring');
+  }
+  calSelected = iso;
+  if (iso === todayISO) {
+    resetToNow();
+  } else {
+    showDateStatus(iso);
+    document.getElementById('status-card').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+}
+
+function resetToNow() {
+  calSelected = null;
+  document.querySelectorAll('.cal-day.selected-ring').forEach(el => el.classList.remove('selected-ring'));
+  document.getElementById('back-to-now').style.display = 'none';
+  updateStatus();
+}
+
+function showDateStatus(iso) {
+  const info = SHIFTS[iso];
+  const type = info ? info.type : 'off';
+  document.getElementById('today-label').textContent = friendlyDate(iso);
+  document.getElementById('back-to-now').style.display = 'inline-block';
+  if (type === 'night') {
+    const [nStart, nEnd] = getHours(info.code, 'night');
+    setStatus('🌙', 'Working', info.label,
+      `${fmtHour(nStart)} – ${fmtHour(nEnd)} (next day)`, 'night');
+  } else if (type === 'day') {
+    const [dStart, dEnd] = getHours(info.code, 'day');
+    setStatus('☀️', 'Working', info.label,
+      `${fmtHour(dStart)} – ${fmtHour(dEnd)}`, 'day');
+  } else if (type === 'relief') {
+    setStatus('📟', 'On Sick Relief', 'Available to cover if needed',
+      'Not a scheduled shift — covering for sick colleagues', 'relief');
+  } else {
+    setStatus('✅', 'Day Off', 'Not working this day',
+      info ? info.label : '', 'off');
+  }
 }
 
 function changeMonth(dir) {
