@@ -253,44 +253,44 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     }
 
     /* ── MAIN ── */
-    main { max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    main { max-width: 640px; margin: 0 auto; padding: 1rem 1rem 3rem; }
 
     /* ── STATUS CARD ── */
     .card {
       background: #fff;
-      border-radius: 20px;
+      border-radius: 16px;
       box-shadow: 0 4px 24px rgba(0,0,0,.08);
-      padding: 2rem 1.5rem 1.8rem;
+      padding: 1.1rem 1.5rem 1rem;
       text-align: center;
-      margin-bottom: 1.2rem;
+      margin-bottom: .7rem;
     }
 
     .today-label {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: .08em;
       text-transform: uppercase;
       color: #718096;
-      margin-bottom: .8rem;
-    }
-
-    .status-emoji { font-size: 4.5rem; line-height: 1; margin-bottom: .5rem; }
-
-    .status-answer {
-      font-size: clamp(2.2rem, 10vw, 3.4rem);
-      font-weight: 900;
-      line-height: 1.1;
       margin-bottom: .4rem;
     }
 
+    .status-emoji { font-size: 2.8rem; line-height: 1; margin-bottom: .3rem; }
+
+    .status-answer {
+      font-size: clamp(1.7rem, 8vw, 2.4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: .25rem;
+    }
+
     .status-shift {
-      font-size: 1.25rem;
+      font-size: 1rem;
       font-weight: 600;
-      margin-bottom: .3rem;
+      margin-bottom: .2rem;
     }
 
     .status-sub {
-      font-size: .95rem;
+      font-size: .85rem;
       color: #718096;
     }
 
@@ -308,30 +308,30 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     /* ── NEXT SHIFT ── */
     .next-card {
       background: #fff;
-      border-radius: 16px;
+      border-radius: 12px;
       box-shadow: 0 2px 12px rgba(0,0,0,.06);
-      padding: 1.2rem 1.5rem;
-      margin-bottom: 1.2rem;
+      padding: .8rem 1.2rem;
+      margin-bottom: .7rem;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: .75rem;
     }
-    .next-icon { font-size: 2rem; flex-shrink: 0; }
-    .next-title { font-size: .75rem; font-weight: 700; text-transform: uppercase;
-                  letter-spacing: .07em; color: #718096; margin-bottom: .2rem; }
-    .next-info  { font-size: 1.05rem; font-weight: 700; color: #2d3748; }
-    .next-sub   { font-size: .875rem; color: #718096; }
+    .next-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .next-title { font-size: .7rem; font-weight: 700; text-transform: uppercase;
+                  letter-spacing: .07em; color: #718096; margin-bottom: .1rem; }
+    .next-info  { font-size: .95rem; font-weight: 700; color: #2d3748; }
+    .next-sub   { font-size: .8rem; color: #718096; }
 
     /* ── LOOK UP A DATE ── */
     .lookup-card {
       background: #fff;
-      border-radius: 16px;
+      border-radius: 12px;
       box-shadow: 0 2px 12px rgba(0,0,0,.06);
-      padding: 1.4rem 1.5rem;
-      margin-bottom: 1.2rem;
+      padding: 1rem 1.2rem;
+      margin-bottom: .7rem;
     }
     .lookup-card h2 {
-      font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 1rem;
+      font-size: .9rem; font-weight: 700; color: #2d3748; margin-bottom: .7rem;
     }
     .lookup-row { display: flex; gap: .6rem; }
     .lookup-row input {
@@ -354,10 +354,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     /* ── CALENDAR ── */
     .cal-card {
       background: #fff;
-      border-radius: 16px;
+      border-radius: 12px;
       box-shadow: 0 2px 12px rgba(0,0,0,.06);
-      padding: 1.4rem 1rem;
-      margin-bottom: 1.2rem;
+      padding: 1rem .8rem;
+      margin-bottom: .7rem;
     }
     .cal-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -493,7 +493,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="next-card" id="next-card" style="display:none">
       <div class="next-icon" id="next-icon">📅</div>
       <div>
-        <div class="next-title">Next shift</div>
+        <div class="next-title" id="next-title">Next shift</div>
         <div class="next-info" id="next-info"></div>
         <div class="next-sub" id="next-sub"></div>
       </div>
@@ -638,7 +638,7 @@ function updateStatus() {
   const yestISO  = toISO(new Date(now - 86400000));
 
   const dayStr = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
-  document.getElementById('today-label').textContent = dayStr;
+  document.getElementById('today-label').textContent = `Now: ${dayStr}`;
 
   // Is yesterday's night shift still running now?
   const yInfo = SHIFTS[yestISO];
@@ -690,21 +690,79 @@ function updateStatus() {
 }
 
 // ── NEXT SHIFT ───────────────────────────────────────────
-function updateNextShift() {
-  const todayISO = toISO(new Date());
-  const upcoming = Object.entries(SHIFTS)
-    .filter(([iso, info]) => iso > todayISO && (info.type === 'night' || info.type === 'day' || info.type === 'relief'))
-    .sort(([a],[b]) => a.localeCompare(b));
+function isWorkShift(type) {
+  return type === 'night' || type === 'day' || type === 'relief';
+}
 
-  if (!upcoming.length) return;
-  const [iso, info] = upcoming[0];
+function updateNextShift() {
+  const now      = new Date();
+  const hour     = now.getHours() + now.getMinutes() / 60;
+  const todayISO = toISO(now);
+  const yestISO  = toISO(new Date(now - 86400000));
+
+  const todayInfo = SHIFTS[todayISO];
+  const todayType = todayInfo ? todayInfo.type : 'off';
+
+  // Yesterday's night still running into this morning?
+  const yInfo = SHIFTS[yestISO];
+  const overnightActive = yInfo && yInfo.type === 'night' && hour < getHours(yInfo.code, 'night')[1];
+
+  // Are we mid-run? Today is a working shift day (any time), or overnight still active.
+  const baseISO  = (overnightActive && !isWorkShift(todayType)) ? yestISO : todayISO;
+  const baseInfo = SHIFTS[baseISO];
+  const baseType = baseInfo ? baseInfo.type : 'off';
+  const midRun   = isWorkShift(baseType);
 
   const card = document.getElementById('next-card');
-  card.style.display = 'flex';
-  const hours = (info.type === 'night' || info.type === 'day') ? shiftHoursStr(info.code, info.type) : '';
-  document.getElementById('next-icon').textContent  = shiftEmoji(info.type);
-  document.getElementById('next-info').textContent  = friendlyDate(iso);
-  document.getElementById('next-sub').textContent   = `${info.label}${hours ? ' · ' + hours : ''} · ${daysUntil(iso)}`;
+
+  if (midRun) {
+    // Find the contiguous run block containing baseISO
+    const workDates = Object.entries(SHIFTS)
+      .filter(([, info]) => isWorkShift(info.type))
+      .map(([iso]) => iso)
+      .sort();
+
+    const baseIdx = workDates.indexOf(baseISO);
+    let end = baseIdx;
+    while (end < workDates.length - 1) {
+      const gap = (new Date(workDates[end + 1]) - new Date(workDates[end])) / 86400000;
+      if (gap <= 1) end++;
+      else break;
+    }
+
+    // Shifts remaining in the run from baseISO onwards
+    let remaining = workDates.slice(baseIdx, end + 1);
+
+    // If today's day shift has already ended, exclude today
+    if (baseISO === todayISO && todayType === 'day') {
+      const [, dEnd] = getHours(todayInfo.code, 'day');
+      if (hour >= dEnd) remaining = remaining.filter(iso => iso > todayISO);
+    }
+
+    if (!remaining.length) return;
+
+    card.style.display = 'flex';
+    document.getElementById('next-title').textContent = 'This run';
+    document.getElementById('next-icon').textContent  = '📋';
+    document.getElementById('next-info').textContent  = `${remaining.length} shift${remaining.length !== 1 ? 's' : ''} remaining`;
+    const lastISO = workDates[end];
+    document.getElementById('next-sub').textContent   = `Run ends ${friendlyDate(lastISO)}`;
+
+  } else {
+    // Day off between runs — show next upcoming shift
+    const upcoming = Object.entries(SHIFTS)
+      .filter(([iso, info]) => iso > todayISO && isWorkShift(info.type))
+      .sort(([a],[b]) => a.localeCompare(b));
+
+    if (!upcoming.length) return;
+    const [iso, info] = upcoming[0];
+
+    card.style.display = 'flex';
+    document.getElementById('next-title').textContent = 'Next shift';
+    document.getElementById('next-icon').textContent  = shiftEmoji(info.type);
+    document.getElementById('next-info').textContent  = friendlyDate(iso);
+    document.getElementById('next-sub').textContent   = `${info.label} · ${shiftHoursStr(info.code, info.type)} · ${daysUntil(iso)}`;
+  }
 }
 
 // ── DATE LOOKUP ──────────────────────────────────────────
