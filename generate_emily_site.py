@@ -34,27 +34,37 @@ PERSON_NAME  = "Emily"
 PERSON_EMOJI = "💉"
 
 # ── Shift hours (start, end) decimal 24hr ─────────────────
-# Resident shift codes for Term 2 (Paeds ED / PNW)
 SHIFT_HOURS = {
+    # Term 2 — resident codes
     "D8":    (7.0,  15.5),   # 07:00 – 15:30
-    "D10":   (8.0,  18.5),   # 08:00 – 18:30  (weekday)
-    "D10WE": (7.0,  17.5),   # 07:00 – 17:30  (weekend)
+    "D10":   (8.0,  18.5),   # 08:00 – 18:30
+    "D10WE": (7.0,  17.5),   # 07:00 – 17:30
     "E10":   (14.0, 24.0),   # 14:00 – 00:00
-    "E10WE": (14.0, 24.0),   # 14:00 – 00:00  (weekend)
-    "E10S":  (11.0, 21.0),   # 11:00 – 21:00  (orientation-week one-off)
+    "E10WE": (14.0, 24.0),   # 14:00 – 00:00
+    "E10S":  (11.0, 21.0),   # 11:00 – 21:00  (orientation one-off)
     "P10":   (8.0,  18.5),   # 08:00 – 18:30  (PNW)
+    # Previous term — kept so old shifts display correctly
+    "wD8":   (8.0,  18.0),
+    "N":     (22.5,  8.5),
+    "wN":    (22.5,  8.5),
+    "E14":   (14.0, 24.0),
+    "wE14":  (14.0, 24.0),
+    "M13":   (13.0, 23.0),
+    "wM13":  (13.0, 23.0),
 }
 
 DEFAULT_DAY_HOURS   = (8.0,  18.5)
 DEFAULT_NIGHT_HOURS = (22.5,  8.5)
 
-NIGHT_CODES   = set()
-RELIEF_CODES  = {"SR"}
-LEAVE_CODES   = {"ADO10", "ADO"}
-EVENING_CODES = {"E10", "E10WE", "E10S"}
-DAY_CODES     = {"D8", "D10", "D10WE", "P10"}
+NIGHT_CODES     = {"N", "wN"}
+RELIEF_CODES    = {"SR"}
+LEAVE_CODES     = {"ADO10", "ADO"}
+EVENING_CODES   = {"E10", "E10WE", "E10S"}
+AFTERNOON_CODES = {"E14", "wE14", "M13", "wM13"}
+DAY_CODES       = {"D8", "D10", "D10WE", "P10", "wD8"}
 
 SHIFT_LABELS = {
+    # Term 2
     "D8":    "Day (8 hour)",
     "D10":   "Day (10 hour)",
     "D10WE": "Day (10 hour, weekend)",
@@ -65,6 +75,16 @@ SHIFT_LABELS = {
     "SR":    "Sick Relief",
     "ADO10": "Rostered Day Off",
     "ADO":   "Rostered Day Off",
+    # Previous term
+    "wD8":   "Day Shift (Weekend)",
+    "N":     "Night Shift",
+    "wN":    "Night Shift (Weekend)",
+    "E14":   "Afternoon Shift",
+    "wE14":  "Afternoon Shift (Weekend)",
+    "M13":   "Afternoon Shift",
+    "wM13":  "Afternoon Shift (Weekend)",
+    # Holiday override
+    "AL":    "On Holidays! 🍊",
 }
 
 # Codes shown in the edit panel add-shift dropdown
@@ -78,6 +98,45 @@ ADDABLE_SHIFTS = [
     ("SR",    "Sick Relief"),
     ("ADO10", "Rostered Day Off"),
 ]
+
+# ── Hardcoded shifts from previous term ───────────────────
+# Recovered from the previous Netlify deploy. Do not edit.
+OLD_SHIFTS = {
+    "2026-04-27": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
+    "2026-04-28": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
+    "2026-04-29": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
+    "2026-05-04": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-05-05": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-05-06": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-05-10": {"code": "wM13", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
+    "2026-05-11": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
+    "2026-05-12": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
+    "2026-05-13": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
+    "2026-05-18": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-05-19": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-05-20": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-05-21": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-05-22": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-05-27": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-05-28": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-05-29": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-05-30": {"code": "wD8",  "type": "day",       "label": "Day Shift (Weekend)"},
+    "2026-06-03": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-06-04": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-06-05": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-06-08": {"code": "wN",   "type": "night",     "label": "Night Shift (Weekend)"},
+    "2026-06-09": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-06-10": {"code": "N",    "type": "night",     "label": "Night Shift"},
+    "2026-06-14": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
+    "2026-06-15": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
+    "2026-06-19": {"code": "D8",   "type": "day",       "label": "Day Shift"},
+    "2026-06-20": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
+    "2026-06-21": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
+}
+
+# ── Holiday override ───────────────────────────────────────
+HOLIDAY_START = date(2026, 7, 13)
+HOLIDAY_END   = date(2026, 7, 26)
 
 # ============================================================
 # CORE LOGIC
@@ -115,6 +174,8 @@ def classify(code):
         return "off"
     if code in EVENING_CODES:
         return "evening"
+    if code in AFTERNOON_CODES:
+        return "afternoon"
     if code in DAY_CODES:
         return "day"
     return "off"
@@ -298,6 +359,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .theme-off .status-sub { color: #66bb6a; }
     .theme-relief    { background: #fdf6e3; color: #92610a; border: 2px solid #f6d860; }
     .theme-relief .status-sub { color: #b07d2a; }
+    .theme-holiday   { background: #fff3e0; color: #e65100; border: 2px solid #ffb74d; }
+    .theme-holiday .status-sub { color: #ef6c00; }
     .theme-unknown   { background: #f5f5f5; color: #424242; }
 
     /* ── NEXT SHIFT ── */
@@ -371,6 +434,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .cal-day.afternoon { background: #d1fae5; color: #065f46; }
     .cal-day.evening   { background: #ede9fe; color: #5b21b6; }
     .cal-day.relief    { background: #fdf6e3; color: #92610a; border: 1px solid #f6d860; }
+    .cal-day.holiday   { background: #ffe0b2; color: #e65100; }
     .cal-day.today-ring    { outline: 3px solid #0d9488; outline-offset: 1px; }
     .cal-day.selected-ring { outline: 3px solid #f6ad55; outline-offset: 1px; }
     .cal-day .day-num  { font-weight: 700; line-height: 1; }
@@ -551,10 +615,12 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
       <div class="legend" style="margin-top:.8rem">
+        <div class="leg-item"><div class="leg-dot leg-night"></div>Night</div>
         <div class="leg-item"><div class="leg-dot leg-day"></div>Day shift</div>
+        <div class="leg-item"><div class="leg-dot leg-afternoon"></div>Afternoon shift</div>
         <div class="leg-item"><div class="leg-dot leg-evening"></div>Evening shift</div>
         <div class="leg-item"><div class="leg-dot leg-relief"></div>Sick Relief</div>
-        <div class="leg-item"><div class="leg-dot leg-off"></div>Day Off (ADO)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffe0b2;border:1px solid #ffb74d"></div>Holidays 🍊</div>
       </div>
     </div>
 
@@ -636,12 +702,12 @@ function friendlyDate(iso) {
   return new Date(y,m-1,d).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 function shiftEmoji(type) {
-  return {night:'🌙', day:'☀️', afternoon:'🌤️', evening:'🌆', relief:'📟', off:'💤'}[type] || '❓';
+  return {night:'🌙', day:'☀️', afternoon:'🌤️', evening:'🌆', relief:'📟', off:'💤', holiday:'🍊'}[type] || '❓';
 }
 function shiftTheme(type) {
   return {
     night:'theme-night', day:'theme-day', afternoon:'theme-afternoon',
-    evening:'theme-evening', relief:'theme-relief', off:'theme-off'
+    evening:'theme-evening', relief:'theme-relief', off:'theme-off', holiday:'theme-holiday'
   }[type] || 'theme-unknown';
 }
 function fmtHour(h) {
@@ -724,6 +790,8 @@ function updateStatus() {
     }
   } else if (type === 'relief') {
     setStatus('📟','On Call','Available if needed','On call — may be called in to cover','relief');
+  } else if (type === 'holiday') {
+    setStatus('🍊','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
   } else {
     setStatus('✅','No','Emily is not working today','','off');
   }
@@ -791,6 +859,7 @@ function lookupDate() {
     afternoon: {bg:'#d1fae5',color:'#065f46',text:`🌤️ Yes — ${info?.label||'Afternoon Shift'}${hrs}`},
     evening:   {bg:'#ede9fe',color:'#5b21b6',text:`🌆 Yes — ${info?.label||'Evening Shift'}${hrs}`},
     relief:    {bg:'#fdf6e3',color:'#92610a',text:`📟 On Call — may be called in`},
+    holiday:   {bg:'#fff3e0',color:'#e65100',text:`🍊 On Holidays! Emily is on annual leave`},
     off:       {bg:'#f0fff4',color:'#276749',text:`✅ No — Emily is off`},
   };
   const t = themes[type] || themes.off;
@@ -863,6 +932,8 @@ function showDateStatus(iso) {
     setStatus(shiftEmoji(type),info.label,`${fmtHour(dS)} – ${dE>=24?'midnight':fmtHour(dE)}`,'',type);
   } else if (type === 'relief') {
     setStatus('📟','On Call','Available if needed','On call — may be called in','relief');
+  } else if (type === 'holiday') {
+    setStatus('🍊','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
   } else {
     setStatus('✅','Day Off','Not working this day',info?info.label:'','off');
   }
@@ -1042,6 +1113,19 @@ def main():
 
     print(f"\n📂 Reading: {xlsx_path.name}")
     shifts = parse_roster(xlsx_path)
+
+    # Merge in historical shifts from previous term (do not overwrite new data)
+    for iso, info in OLD_SHIFTS.items():
+        if iso not in shifts:
+            shifts[iso] = info
+    print(f"  ✓ Merged {len(OLD_SHIFTS)} historical shifts")
+
+    # Apply holiday override for Jul 13–26
+    d = HOLIDAY_START
+    while d <= HOLIDAY_END:
+        shifts[d.isoformat()] = {"code": "AL", "type": "holiday", "label": "On Holidays! 🍊"}
+        d += timedelta(days=1)
+    print(f"  ✓ Applied holiday override ({HOLIDAY_START} – {HOLIDAY_END})")
 
     print(f"\n  Shift type breakdown:")
     from collections import Counter

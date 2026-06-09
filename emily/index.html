@@ -56,6 +56,8 @@
     .theme-off .status-sub { color: #66bb6a; }
     .theme-relief    { background: #fdf6e3; color: #92610a; border: 2px solid #f6d860; }
     .theme-relief .status-sub { color: #b07d2a; }
+    .theme-holiday   { background: #fff3e0; color: #e65100; border: 2px solid #ffb74d; }
+    .theme-holiday .status-sub { color: #ef6c00; }
     .theme-unknown   { background: #f5f5f5; color: #424242; }
 
     /* ── NEXT SHIFT ── */
@@ -129,6 +131,7 @@
     .cal-day.afternoon { background: #d1fae5; color: #065f46; }
     .cal-day.evening   { background: #ede9fe; color: #5b21b6; }
     .cal-day.relief    { background: #fdf6e3; color: #92610a; border: 1px solid #f6d860; }
+    .cal-day.holiday   { background: #ffe0b2; color: #e65100; }
     .cal-day.today-ring    { outline: 3px solid #0d9488; outline-offset: 1px; }
     .cal-day.selected-ring { outline: 3px solid #f6ad55; outline-offset: 1px; }
     .cal-day .day-num  { font-weight: 700; line-height: 1; }
@@ -309,10 +312,12 @@
       </div>
       <div class="cal-grid" id="cal-grid"></div>
       <div class="legend" style="margin-top:.8rem">
+        <div class="leg-item"><div class="leg-dot leg-night"></div>Night</div>
         <div class="leg-item"><div class="leg-dot leg-day"></div>Day shift</div>
+        <div class="leg-item"><div class="leg-dot leg-afternoon"></div>Afternoon shift</div>
         <div class="leg-item"><div class="leg-dot leg-evening"></div>Evening shift</div>
         <div class="leg-item"><div class="leg-dot leg-relief"></div>Sick Relief</div>
-        <div class="leg-item"><div class="leg-dot leg-off"></div>Day Off (ADO)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffe0b2;border:1px solid #ffb74d"></div>Holidays 🍊</div>
       </div>
     </div>
 
@@ -337,7 +342,7 @@
     </div>
 
     <footer>
-      Last updated: <strong>09 Jun 2026 at 20:53</strong> ·
+      Last updated: <strong>09 Jun 2026 at 21:11</strong> ·
       <a href="shifts.ics">shifts.ics</a>
     </footer>
   </main>
@@ -386,10 +391,10 @@
 
 <script>
 // ── DATA ─────────────────────────────────────────────────
-const BASE_SHIFTS = {"2026-06-22":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-23":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-24":{"code":"E10S","type":"evening","label":"Evening (10 hour)"},"2026-06-25":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-26":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-27":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-06-28":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-07-02":{"code":"P10","type":"day","label":"PNW (10 hour)"},"2026-07-04":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-07-05":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-07-06":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-07":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-08":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-09":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-10":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-13":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-14":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-15":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-16":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-17":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-20":{"code":"D10","type":"day","label":"Day (10 hour)"},"2026-07-21":{"code":"D10","type":"day","label":"Day (10 hour)"},"2026-07-22":{"code":"D10","type":"day","label":"Day (10 hour)"},"2026-07-27":{"code":"D10","type":"day","label":"Day (10 hour)"},"2026-07-28":{"code":"D10","type":"day","label":"Day (10 hour)"},"2026-08-01":{"code":"D10WE","type":"day","label":"Day (10 hour, weekend)"},"2026-08-02":{"code":"D10WE","type":"day","label":"Day (10 hour, weekend)"},"2026-08-06":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-07":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-08":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-08-09":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-08-10":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-11":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-12":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-13":{"code":"P10","type":"day","label":"PNW (10 hour)"},"2026-08-17":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-18":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-19":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-22":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-08-23":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-08-24":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-25":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-26":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-27":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-28":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-31":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-09-01":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-09-05":{"code":"D10WE","type":"day","label":"Day (10 hour, weekend)"},"2026-09-06":{"code":"SR","type":"relief","label":"Sick Relief"}};
+const BASE_SHIFTS = {"2026-06-22":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-23":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-24":{"code":"E10S","type":"evening","label":"Evening (10 hour)"},"2026-06-25":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-26":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-06-27":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-06-28":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-07-02":{"code":"P10","type":"day","label":"PNW (10 hour)"},"2026-07-04":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-07-05":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-07-06":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-07":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-08":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-09":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-10":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-07-13":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-14":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-15":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-16":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-17":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-20":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-21":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-22":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-27":{"code":"D10","type":"day","label":"Day (10 hour)"},"2026-07-28":{"code":"D10","type":"day","label":"Day (10 hour)"},"2026-08-01":{"code":"D10WE","type":"day","label":"Day (10 hour, weekend)"},"2026-08-02":{"code":"D10WE","type":"day","label":"Day (10 hour, weekend)"},"2026-08-06":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-07":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-08":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-08-09":{"code":"E10WE","type":"evening","label":"Evening (10 hour, weekend)"},"2026-08-10":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-11":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-12":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-13":{"code":"P10","type":"day","label":"PNW (10 hour)"},"2026-08-17":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-18":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-19":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-08-22":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-08-23":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-08-24":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-25":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-26":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-27":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-28":{"code":"D8","type":"day","label":"Day (8 hour)"},"2026-08-31":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-09-01":{"code":"E10","type":"evening","label":"Evening (10 hour)"},"2026-09-05":{"code":"D10WE","type":"day","label":"Day (10 hour, weekend)"},"2026-09-06":{"code":"SR","type":"relief","label":"Sick Relief"},"2026-04-27":{"code":"wE14","type":"afternoon","label":"Afternoon Shift (Weekend)"},"2026-04-28":{"code":"E14","type":"afternoon","label":"Afternoon Shift"},"2026-04-29":{"code":"E14","type":"afternoon","label":"Afternoon Shift"},"2026-05-04":{"code":"N","type":"night","label":"Night Shift"},"2026-05-05":{"code":"N","type":"night","label":"Night Shift"},"2026-05-06":{"code":"N","type":"night","label":"Night Shift"},"2026-05-10":{"code":"wM13","type":"afternoon","label":"Afternoon Shift (Weekend)"},"2026-05-11":{"code":"E14","type":"afternoon","label":"Afternoon Shift"},"2026-05-12":{"code":"E14","type":"afternoon","label":"Afternoon Shift"},"2026-05-13":{"code":"E14","type":"afternoon","label":"Afternoon Shift"},"2026-05-18":{"code":"D8","type":"day","label":"Day Shift"},"2026-05-19":{"code":"D8","type":"day","label":"Day Shift"},"2026-05-20":{"code":"N","type":"night","label":"Night Shift"},"2026-05-21":{"code":"N","type":"night","label":"Night Shift"},"2026-05-22":{"code":"N","type":"night","label":"Night Shift"},"2026-05-27":{"code":"D8","type":"day","label":"Day Shift"},"2026-05-28":{"code":"D8","type":"day","label":"Day Shift"},"2026-05-29":{"code":"D8","type":"day","label":"Day Shift"},"2026-05-30":{"code":"wD8","type":"day","label":"Day Shift (Weekend)"},"2026-06-03":{"code":"D8","type":"day","label":"Day Shift"},"2026-06-04":{"code":"D8","type":"day","label":"Day Shift"},"2026-06-05":{"code":"D8","type":"day","label":"Day Shift"},"2026-06-08":{"code":"wN","type":"night","label":"Night Shift (Weekend)"},"2026-06-09":{"code":"N","type":"night","label":"Night Shift"},"2026-06-10":{"code":"N","type":"night","label":"Night Shift"},"2026-06-14":{"code":"wE14","type":"afternoon","label":"Afternoon Shift (Weekend)"},"2026-06-15":{"code":"E14","type":"afternoon","label":"Afternoon Shift"},"2026-06-19":{"code":"D8","type":"day","label":"Day Shift"},"2026-06-20":{"code":"wE14","type":"afternoon","label":"Afternoon Shift (Weekend)"},"2026-06-21":{"code":"wE14","type":"afternoon","label":"Afternoon Shift (Weekend)"},"2026-07-18":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-19":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-23":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-24":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-25":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"},"2026-07-26":{"code":"AL","type":"holiday","label":"On Holidays! \ud83c\udf4a"}};
 let   SHIFTS      = Object.assign({}, BASE_SHIFTS);
 const CODE_INFO   = {"D8":{"type":"day","label":"Day (8 hour)"},"D10":{"type":"day","label":"Day (10 hour)"},"D10WE":{"type":"day","label":"Day (10 hour, weekend)"},"E10":{"type":"evening","label":"Evening (10 hour)"},"E10WE":{"type":"evening","label":"Evening (10 hour, weekend)"},"P10":{"type":"day","label":"PNW (10 hour)"},"SR":{"type":"relief","label":"Sick Relief"},"ADO10":{"type":"off","label":"Rostered Day Off"}};
-const HOURS       = {"D8": [7.0, 15.5], "D10": [8.0, 18.5], "D10WE": [7.0, 17.5], "E10": [14.0, 24.0], "E10WE": [14.0, 24.0], "E10S": [11.0, 21.0], "P10": [8.0, 18.5]};
+const HOURS       = {"D8": [7.0, 15.5], "D10": [8.0, 18.5], "D10WE": [7.0, 17.5], "E10": [14.0, 24.0], "E10WE": [14.0, 24.0], "E10S": [11.0, 21.0], "P10": [8.0, 18.5], "wD8": [8.0, 18.0], "N": [22.5, 8.5], "wN": [22.5, 8.5], "E14": [14.0, 24.0], "wE14": [14.0, 24.0], "M13": [13.0, 23.0], "wM13": [13.0, 23.0]};
 const DEFAULT_HOURS = { day: [8.0, 18.5], night: [22.5, 8.5] };
 
 // ── HELPERS ──────────────────────────────────────────────
@@ -401,12 +406,12 @@ function friendlyDate(iso) {
   return new Date(y,m-1,d).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 function shiftEmoji(type) {
-  return {night:'🌙', day:'☀️', afternoon:'🌤️', evening:'🌆', relief:'📟', off:'💤'}[type] || '❓';
+  return {night:'🌙', day:'☀️', afternoon:'🌤️', evening:'🌆', relief:'📟', off:'💤', holiday:'🍊'}[type] || '❓';
 }
 function shiftTheme(type) {
   return {
     night:'theme-night', day:'theme-day', afternoon:'theme-afternoon',
-    evening:'theme-evening', relief:'theme-relief', off:'theme-off'
+    evening:'theme-evening', relief:'theme-relief', off:'theme-off', holiday:'theme-holiday'
   }[type] || 'theme-unknown';
 }
 function fmtHour(h) {
@@ -489,6 +494,8 @@ function updateStatus() {
     }
   } else if (type === 'relief') {
     setStatus('📟','On Call','Available if needed','On call — may be called in to cover','relief');
+  } else if (type === 'holiday') {
+    setStatus('🍊','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
   } else {
     setStatus('✅','No','Emily is not working today','','off');
   }
@@ -556,6 +563,7 @@ function lookupDate() {
     afternoon: {bg:'#d1fae5',color:'#065f46',text:`🌤️ Yes — ${info?.label||'Afternoon Shift'}${hrs}`},
     evening:   {bg:'#ede9fe',color:'#5b21b6',text:`🌆 Yes — ${info?.label||'Evening Shift'}${hrs}`},
     relief:    {bg:'#fdf6e3',color:'#92610a',text:`📟 On Call — may be called in`},
+    holiday:   {bg:'#fff3e0',color:'#e65100',text:`🍊 On Holidays! Emily is on annual leave`},
     off:       {bg:'#f0fff4',color:'#276749',text:`✅ No — Emily is off`},
   };
   const t = themes[type] || themes.off;
@@ -628,6 +636,8 @@ function showDateStatus(iso) {
     setStatus(shiftEmoji(type),info.label,`${fmtHour(dS)} – ${dE>=24?'midnight':fmtHour(dE)}`,'',type);
   } else if (type === 'relief') {
     setStatus('📟','On Call','Available if needed','On call — may be called in','relief');
+  } else if (type === 'holiday') {
+    setStatus('🍊','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
   } else {
     setStatus('✅','Day Off','Not working this day',info?info.label:'','off');
   }
