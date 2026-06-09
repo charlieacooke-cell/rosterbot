@@ -342,7 +342,7 @@
     </div>
 
     <footer>
-      Last updated: <strong>09 Jun 2026 at 21:19</strong> ·
+      Last updated: <strong>09 Jun 2026 at 21:22</strong> ·
       <a href="shifts.ics">shifts.ics</a>
     </footer>
   </main>
@@ -665,7 +665,12 @@ async function loadOverrides() {
     if (!res.ok) return;
     const data = await res.json();
     if (data && Object.keys(data).length > 0) {
-      SHIFTS = data;
+      // Merge delta on top of base — null entry means "deleted"
+      SHIFTS = Object.assign({}, BASE_SHIFTS);
+      for (const [iso, info] of Object.entries(data)) {
+        if (info === null) delete SHIFTS[iso];
+        else SHIFTS[iso] = info;
+      }
       refresh();
     }
   } catch { /* local file preview — use embedded data */ }
@@ -733,11 +738,24 @@ async function saveEdits() {
   const err = document.getElementById('save-error');
   err.style.display = 'none';
   btn.textContent = 'Saving…'; btn.disabled = true;
+
+  // Compute delta vs BASE_SHIFTS so we only persist overrides, not the whole dataset.
+  // This means regenerating the site never loses manual edits, and old stored data
+  // from a previous term can't override new base shifts.
+  const delta = {};
+  for (const [iso, info] of Object.entries(editShifts)) {
+    const base = BASE_SHIFTS[iso];
+    if (!base || base.code !== info.code) delta[iso] = info;
+  }
+  for (const iso of Object.keys(BASE_SHIFTS)) {
+    if (!(iso in editShifts)) delta[iso] = null; // deleted entry
+  }
+
   try {
     const res = await fetch('/api/shifts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: editPassword, shifts: editShifts }),
+      body: JSON.stringify({ password: editPassword, shifts: delta }),
     });
     if (res.status === 401) { err.textContent = 'Wrong password.'; err.style.display = 'inline'; }
     else if (!res.ok) { err.textContent = 'Save failed — try again.'; err.style.display = 'inline'; }
