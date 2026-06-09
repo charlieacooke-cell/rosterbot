@@ -32,8 +32,8 @@ from pathlib import Path
 CHARLIE_COLUMN_NAME = "Charlie"   # Name as it appears in the spreadsheet header
 
 CSV_FILE = "2026 ICU Roster - Charlie Copy CSV.csv"
-OUTPUT_HTML = "index.html"
-OUTPUT_ICS  = "shifts.ics"
+OUTPUT_HTML = "charlie/index.html"
+OUTPUT_ICS  = "charlie/shifts.ics"
 
 # Site appearance
 SITE_TITLE    = "Is Charlie Working?"

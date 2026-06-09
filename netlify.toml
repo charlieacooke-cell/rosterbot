@@ -1,5 +1,2 @@
-[build]
-  publish = "emily"
-
 [functions]
   node_bundler = "esbuild"
