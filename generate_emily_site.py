@@ -84,7 +84,7 @@ SHIFT_LABELS = {
     "M13":   "Afternoon Shift",
     "wM13":  "Afternoon Shift (Weekend)",
     # Holiday override
-    "AL":    "On Holidays! 🍊",
+    "AL":    "On Holidays! 🍹",
 }
 
 # Codes shown in the edit panel add-shift dropdown
@@ -620,7 +620,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <div class="leg-item"><div class="leg-dot leg-afternoon"></div>Afternoon shift</div>
         <div class="leg-item"><div class="leg-dot leg-evening"></div>Evening shift</div>
         <div class="leg-item"><div class="leg-dot leg-relief"></div>Sick Relief</div>
-        <div class="leg-item"><div class="leg-dot" style="background:#ffe0b2;border:1px solid #ffb74d"></div>Holidays 🍊</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffe0b2;border:1px solid #ffb74d"></div>Holidays 🍹</div>
       </div>
     </div>
 
@@ -702,7 +702,7 @@ function friendlyDate(iso) {
   return new Date(y,m-1,d).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 function shiftEmoji(type) {
-  return {night:'🌙', day:'☀️', afternoon:'🌤️', evening:'🌆', relief:'📟', off:'💤', holiday:'🍊'}[type] || '❓';
+  return {night:'🌙', day:'☀️', afternoon:'🌤️', evening:'🌆', relief:'📟', off:'💤', holiday:'🍹'}[type] || '❓';
 }
 function shiftTheme(type) {
   return {
@@ -791,7 +791,7 @@ function updateStatus() {
   } else if (type === 'relief') {
     setStatus('📟','On Call','Available if needed','On call — may be called in to cover','relief');
   } else if (type === 'holiday') {
-    setStatus('🍊','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
+    setStatus('🍹','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
   } else {
     setStatus('✅','No','Emily is not working today','','off');
   }
@@ -859,7 +859,7 @@ function lookupDate() {
     afternoon: {bg:'#d1fae5',color:'#065f46',text:`🌤️ Yes — ${info?.label||'Afternoon Shift'}${hrs}`},
     evening:   {bg:'#ede9fe',color:'#5b21b6',text:`🌆 Yes — ${info?.label||'Evening Shift'}${hrs}`},
     relief:    {bg:'#fdf6e3',color:'#92610a',text:`📟 On Call — may be called in`},
-    holiday:   {bg:'#fff3e0',color:'#e65100',text:`🍊 On Holidays! Emily is on annual leave`},
+    holiday:   {bg:'#fff3e0',color:'#e65100',text:`🍹 On Holidays! Emily is on annual leave`},
     off:       {bg:'#f0fff4',color:'#276749',text:`✅ No — Emily is off`},
   };
   const t = themes[type] || themes.off;
@@ -933,7 +933,7 @@ function showDateStatus(iso) {
   } else if (type === 'relief') {
     setStatus('📟','On Call','Available if needed','On call — may be called in','relief');
   } else if (type === 'holiday') {
-    setStatus('🍊','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
+    setStatus('🍹','On Holidays!','Emily is on annual leave','Enjoy the break 🥂','holiday');
   } else {
     setStatus('✅','Day Off','Not working this day',info?info.label:'','off');
   }
@@ -1123,7 +1123,7 @@ def main():
     # Apply holiday override for Jul 13–26
     d = HOLIDAY_START
     while d <= HOLIDAY_END:
-        shifts[d.isoformat()] = {"code": "AL", "type": "holiday", "label": "On Holidays! 🍊"}
+        shifts[d.isoformat()] = {"code": "AL", "type": "holiday", "label": "On Holidays! 🍹"}
         d += timedelta(days=1)
     print(f"  ✓ Applied holiday override ({HOLIDAY_START} – {HOLIDAY_END})")
 
