@@ -52,6 +52,10 @@ SHIFT_HOURS = {
     "SR":       (8.0,  20.5),   # sick relief — day hours
     "NICU":     (8.0,  17.0),   # 08:00 – 17:00
     "Anaes/SR": (7.5,  17.5),   # 07:30 – 17:30 (from shifts sheet)
+    "NETS":     (7.5,  17.5),   # 07:30 – 17:30 (NETS Retrieval)
+    "APS":      (8.0,  16.5),   # 08:00 – 16:30 (Acute Pain Service)
+    "NSRMO":    (8.0,  16.5),   # 08:00 – 16:30 (North POD SRMO)
+    "SSRMO":    (8.0,  16.5),   # 08:00 – 16:30 (South POD SRMO)
 }
 
 # Fallback for any unrecognised codes
@@ -60,7 +64,7 @@ DEFAULT_NIGHT_HOURS = (20.0,  8.5)
 
 # Shift classifications — add/remove codes as needed
 NIGHT_CODES  = {"NN", "SN", "NFLOAT"}           # North/South POD Night, Night Float
-DAY_CODES    = {"SD", "ND", "DFLOAT", "NICU", "Anaes/SR"}  # ND = North POD Day
+DAY_CODES    = {"SD", "ND", "DFLOAT", "NICU", "Anaes/SR", "NETS", "APS", "NSRMO", "SSRMO"}  # ND = North POD Day
 RELIEF_CODES = {"SR"}
 LEAVE_CODES  = {"AL", "ADO", "SICK"}            # treated as "off" on the website
 IGNORE_CODES = {"NIGHT", "DAY", "Fellow"}        # Fellow shifts — not applicable
@@ -76,6 +80,10 @@ SHIFT_LABELS = {
     "SR":       "Sick Relief",
     "NICU":     "NICU Rotation",
     "Anaes/SR": "Anaesthetics",
+    "NETS":     "NETS Retrieval",
+    "APS":      "Acute Pain Service",
+    "NSRMO":    "North POD SRMO",
+    "SSRMO":    "South POD SRMO",
     "AL":       "Annual Leave",
     "ADO":      "Day Off (Rostered)",
     "SICK":     "Sick Day",
