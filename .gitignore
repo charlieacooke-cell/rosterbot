@@ -18,3 +18,9 @@ Thumbs.db
 
 # Local Netlify folder
 .netlify
+
+# Swap board — keep password and generated roster (colleague data) out of git
+swaps/.password
+netlify/functions/roster.js
+
+node_modules/

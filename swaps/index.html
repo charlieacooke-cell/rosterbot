@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reg Swap Board</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔁</text></svg>">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
+  header{background:#fff;border-bottom:1px solid #e2e8f0;padding:.9rem 1.1rem;display:flex;align-items:center;gap:.5rem;position:sticky;top:0;z-index:20}
+  header span{font-size:1.35rem}
+  header h1{font-size:1.05rem;font-weight:800;color:#2d3748}
+  #whoami{margin-left:auto;font-size:.8rem;color:#718096}
+  #whoami select{font-size:.8rem;padding:.25rem .4rem;border:1px solid #e2e8f0;border-radius:8px}
+  main{max-width:1100px;margin:0 auto;padding:1rem}
+
+  /* gate */
+  .gate{max-width:380px;margin:3rem auto;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:2rem 1.6rem;text-align:center}
+  .gate h2{font-size:1.2rem;margin-bottom:.4rem;color:#2d3748}
+  .gate p{font-size:.9rem;color:#718096;margin-bottom:1.2rem}
+  .gate input{width:100%;padding:.7rem 1rem;border:2px solid #e2e8f0;border-radius:10px;font-size:1rem;outline:none}
+  .gate input:focus{border-color:#0d9488}
+  .gate button{margin-top:.8rem;width:100%;padding:.7rem;background:#0d9488;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
+  .gate button:disabled{opacity:.55}
+  .gate .err{color:#e53e3e;font-size:.85rem;margin-top:.7rem;min-height:1rem}
+
+  .tabs{display:flex;gap:.5rem;margin-bottom:.9rem}
+  .tab{flex:1;padding:.55rem;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-weight:600;font-size:.9rem;cursor:pointer;color:#4a5568}
+  .tab.active{background:#0d9488;color:#fff;border-color:#0d9488}
+
+  .weeknav{display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem}
+  .weeknav button{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:.4rem .8rem;font-size:1rem;cursor:pointer}
+  .weeknav .lbl{font-weight:800;color:#2d3748}
+
+  .gridwrap{overflow-x:auto;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:.4rem}
+  table{border-collapse:collapse;width:100%;font-size:.8rem}
+  th,td{border:1px solid #edf2f7;padding:.35rem .4rem;text-align:center;white-space:nowrap}
+  th.person{position:sticky;left:0;background:#f7fafc;z-index:2;text-align:left;font-weight:700;min-width:92px}
+  td.person{position:sticky;left:0;background:#f7fafc;z-index:1;text-align:left;font-weight:600;min-width:92px}
+  thead th{background:#f7fafc;font-weight:700;color:#4a5568}
+  thead th small{display:block;font-weight:500;color:#a0aec0}
+  td.cell{cursor:default}
+  td.cell.flag-on{outline:3px solid #f6ad55;outline-offset:-3px}
+  .c-night{background:#e8eaf6;color:#283593}
+  .c-day{background:#fff3e0;color:#c2410c}
+  .c-relief{background:#fdf6e3;color:#92610a}
+  .c-leave{background:#f7fafc;color:#a0aec0}
+  .c-admin{background:#f0fdf4;color:#276749}
+  td.cell.mine{cursor:pointer}
+  td.cell.mine:hover{filter:brightness(.94)}
+  .flagmark{font-size:.7rem}
+
+  .legend{display:flex;flex-wrap:wrap;gap:.6rem;margin:.7rem .2rem 0;font-size:.75rem;color:#718096}
+  .legend b{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:.25rem;vertical-align:middle}
+
+  .swaplist{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:.5rem}
+  .swaprow{display:flex;align-items:center;gap:.6rem;padding:.6rem .7rem;border-bottom:1px solid #f0f4f8}
+  .swaprow:last-child{border-bottom:none}
+  .swaprow .d{font-weight:700;color:#2d3748;min-width:120px}
+  .swaprow .who{color:#4a5568;flex:1}
+  .swaprow .badge{font-size:.72rem;font-weight:700;padding:.15rem .45rem;border-radius:6px}
+  .empty{padding:1.4rem;text-align:center;color:#a0aec0}
+  .hint{font-size:.78rem;color:#a0aec0;margin:.6rem .2rem 0}
+</style>
+</head>
+<body>
+<header>
+  <span>🔁</span><h1>Reg Swap Board</h1>
+  <span id="whoami"></span>
+</header>
+<main>
+  <div id="gate" class="gate">
+    <h2>🔁 Reg Swap Board</h2>
+    <p>Enter the shared password to view the roster.</p>
+    <input type="password" id="pw" placeholder="Password" autocomplete="current-password"/>
+    <button id="go">View roster</button>
+    <div class="err" id="err"></div>
+  </div>
+  <div id="app" style="display:none"></div>
+</main>
+
+<script>
+let PW = "", DATA = null, FLAGS = {}, ME = localStorage.getItem("swap_me") || "", VIEW = "grid", weekIdx = 0;
+
+const api = (body) => fetch("/api/roster", {
+  method:"POST", headers:{"Content-Type":"application/json"},
+  body: JSON.stringify({ password: PW, ...body })
+}).then(r => r.json());
+
+// ---- gate ----
+document.getElementById("go").onclick = unlock;
+document.getElementById("pw").addEventListener("keydown", e => { if (e.key==="Enter") unlock(); });
+async function unlock(){
+  const btn=document.getElementById("go"), err=document.getElementById("err");
+  PW = document.getElementById("pw").value.trim();
+  if(!PW){return;}
+  btn.disabled=true; btn.textContent="Checking…"; err.textContent="";
+  const res = await api({action:"load"});
+  btn.disabled=false; btn.textContent="View roster";
+  if(res.error){ err.textContent = res.error==="unauthorized" ? "Wrong password." : res.error; return; }
+  DATA = res.payload; FLAGS = res.flags || {};
+  sessionStorage.setItem("swap_pw", PW);
+  document.getElementById("gate").style.display="none";
+  document.getElementById("app").style.display="block";
+  weekIdx = defaultWeek();
+  renderWhoAmI(); render();
+}
+
+// try to skip gate within a session
+(function(){ const p=sessionStorage.getItem("swap_pw"); if(p){ document.getElementById("pw").value=p; unlock(); } })();
+
+function defaultWeek(){
+  const today = new Date().toISOString().slice(0,10);
+  for(let i=0;i<DATA.weeks.length;i++){ if(DATA.weeks[i].dates.includes(today)) return i; }
+  // else first week whose last date >= today, else 0
+  for(let i=0;i<DATA.weeks.length;i++){ if(DATA.weeks[i].dates.some(d=>d>=today)) return i; }
+  return 0;
+}
+
+function renderWhoAmI(){
+  const el=document.getElementById("whoami");
+  const opts = ['<option value="">who are you?</option>']
+    .concat(DATA.people.map(p=>`<option value="${p}" ${p===ME?"selected":""}>${p}</option>`)).join("");
+  el.innerHTML = `You: <select id="mesel">${opts}</select>`;
+  document.getElementById("mesel").onchange = e => {
+    ME = e.target.value; localStorage.setItem("swap_me", ME); render();
+  };
+}
+
+function fdate(iso){
+  const [y,m,d]=iso.split("-").map(Number);
+  return new Date(y,m-1,d).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+}
+function cls(type){ return "c-"+type; }
+
+function render(){
+  const app=document.getElementById("app");
+  app.innerHTML = `
+    <div class="tabs">
+      <button class="tab ${VIEW==='grid'?'active':''}" onclick="setView('grid')">📅 Roster</button>
+      <button class="tab ${VIEW==='swaps'?'active':''}" onclick="setView('swaps')">🔁 Up for swap</button>
+    </div>
+    <div id="body"></div>`;
+  if(VIEW==="grid") renderGrid(); else renderSwaps();
+}
+function setView(v){ VIEW=v; render(); }
+
+function renderGrid(){
+  const wk = DATA.weeks[weekIdx];
+  const body=document.getElementById("body");
+  let head = `<tr><th class="person">Registrar</th>` +
+    wk.dates.map(d=>`<th>${fdate(d).split(",")[0]}<small>${fdate(d).replace(/^\w+,?\s*/,"")}</small></th>`).join("") + `</tr>`;
+  let rowsHtml = DATA.people.map(person=>{
+    let cells = wk.dates.map(iso=>{
+      const code = (DATA.roster[iso]||{})[person] || "";
+      if(!code) return `<td></td>`;
+      const m = DATA.meta[code] || {label:code,type:"day",flaggable:false};
+      const k = `${iso}|${person}`;
+      const flagged = !!FLAGS[k];
+      const mine = person===ME && m.flaggable;
+      const mk = flagged ? `<div class="flagmark">🔁</div>` : "";
+      return `<td class="cell ${cls(m.type)} ${flagged?'flag-on':''} ${mine?'mine':''}" title="${m.label}${mine?' — tap to toggle swap':''}" ${mine?`onclick="toggleFlag('${iso}','${person}')"`:""}>${code}${mk}</td>`;
+    }).join("");
+    return `<tr><td class="person">${person}</td>${cells}</tr>`;
+  }).join("");
+  body.innerHTML = `
+    <div class="weeknav">
+      <button onclick="chgWeek(-1)" ${weekIdx===0?"disabled":""}>‹</button>
+      <span class="lbl">${wk.label} · ${fdate(wk.dates[0]).replace(/^\w+,?\s*/,"")} – ${fdate(wk.dates[wk.dates.length-1]).replace(/^\w+,?\s*/,"")}</span>
+      <button onclick="chgWeek(1)" ${weekIdx===DATA.weeks.length-1?"disabled":""}>›</button>
+    </div>
+    <div class="gridwrap"><table><thead>${head}</thead><tbody>${rowsHtml}</tbody></table></div>
+    <div class="legend">
+      <span><b class="c-night"></b>Night</span><span><b class="c-day"></b>Day</span>
+      <span><b class="c-relief"></b>Sick relief</span><span><b class="c-leave"></b>Leave/off</span>
+      <span><b class="c-admin"></b>Admin/teaching</span>
+    </div>
+    <div class="hint">${ME? "Tap your own shifts to flag them 🔁 for swap." : "Pick your name (top right) to flag your shifts for swap."}</div>`;
+}
+function chgWeek(d){ weekIdx=Math.max(0,Math.min(DATA.weeks.length-1,weekIdx+d)); render(); }
+
+function renderSwaps(){
+  const body=document.getElementById("body");
+  const items = Object.entries(FLAGS).map(([k,v])=>{
+    const [iso,person]=k.split("|");
+    const code=(DATA.roster[iso]||{})[person]||"?";
+    const m=DATA.meta[code]||{label:code,type:"day"};
+    return {iso,person,code,m,by:v.by};
+  }).sort((a,b)=>a.iso.localeCompare(b.iso));
+  if(!items.length){ body.innerHTML=`<div class="swaplist"><div class="empty">Nothing up for swap right now.</div></div>`; return; }
+  body.innerHTML = `<div class="swaplist">` + items.map(it=>`
+    <div class="swaprow">
+      <span class="d">${fdate(it.iso)}</span>
+      <span class="badge ${cls(it.m.type)}">${it.code}</span>
+      <span class="who"><b>${it.person}</b> wants to swap out · ${it.m.label}</span>
+      ${it.person===ME?`<button class="tab" style="flex:0;padding:.3rem .6rem" onclick="toggleFlag('${it.iso}','${it.person}')">remove</button>`:""}
+    </div>`).join("") + `</div>
+    <div class="hint">Sort out the actual swap directly with the person, then remove the flag.</div>`;
+}
+
+async function toggleFlag(iso, person){
+  if(person!==ME){ return; }
+  const k=`${iso}|${person}`, on=!FLAGS[k];
+  // optimistic
+  if(on) FLAGS[k]={by:ME,at:Date.now()}; else delete FLAGS[k];
+  render();
+  const res = await api({action:"flag", date:iso, person, by:ME, on});
+  if(res.error){ alert("Save failed: "+res.error); }
+  else { FLAGS = res.flags || {}; render(); }
+}
+</script>
+</body>
+</html>
