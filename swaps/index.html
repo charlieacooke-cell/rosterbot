@@ -202,12 +202,17 @@ function renderSwaps(){
 async function toggleFlag(iso, person){
   if(person!==ME){ return; }
   const k=`${iso}|${person}`, on=!FLAGS[k];
-  // optimistic
+  const prev = FLAGS[k];
+  // optimistic update — kept regardless of server response order
   if(on) FLAGS[k]={by:ME,at:Date.now()}; else delete FLAGS[k];
   render();
   const res = await api({action:"flag", date:iso, person, by:ME, on});
-  if(res.error){ alert("Save failed: "+res.error); }
-  else { FLAGS = res.flags || {}; render(); }
+  if(res && res.error){
+    // revert only this one flag on failure; never clobber the whole set
+    if(prev) FLAGS[k]=prev; else delete FLAGS[k];
+    render();
+    alert("Save failed: "+res.error);
+  }
 }
 </script>
 </body>

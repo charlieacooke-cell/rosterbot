@@ -139,8 +139,8 @@ import { getStore } from "@netlify/blobs";
 
 const PAYLOAD = __PAYLOAD__;
 const SHARED_PW = "__PASSWORD__";   // baked in at generate time; this file is gitignored
-const STORE = "reg-swaps";
-const KEY   = "flags";
+const STORE  = "reg-swaps";
+const PREFIX = "flag:";             // one blob per flag → concurrent toggles never clobber
 
 const cors = {
   "Access-Control-Allow-Origin":  "*",
@@ -162,23 +162,27 @@ export default async (req) => {
 
   const store = getStore(STORE);
 
-  // Load current flags
-  let flags = {};
-  try { flags = (await store.get(KEY, { type: "json" })) || {}; } catch { flags = {}; }
-
   if (body.action === "load") {
+    const flags = {};
+    try {
+      const { blobs } = await store.list({ prefix: PREFIX });
+      for (const b of blobs) {
+        const v = await store.get(b.key, { type: "json" });
+        if (v) flags[b.key.slice(PREFIX.length)] = v;
+      }
+    } catch { /* return whatever we have */ }
     return j({ ok: true, payload: PAYLOAD, flags });
   }
 
   if (body.action === "flag") {
     const { date, person, by, on } = body;
     if (!date || !person) return j({ error: "missing date/person" }, 400);
-    const k = `${date}|${person}`;
-    if (on) flags[k] = { by: by || person, at: Date.now() };
-    else    delete flags[k];
-    try { await store.set(KEY, JSON.stringify(flags)); }
-    catch (e) { return j({ error: "storage: " + e.message }, 500); }
-    return j({ ok: true, flags });
+    const key = `${PREFIX}${date}|${person}`;
+    try {
+      if (on) await store.set(key, JSON.stringify({ by: by || person, at: Date.now() }));
+      else    await store.delete(key);
+    } catch (e) { return j({ error: "storage: " + e.message }, 500); }
+    return j({ ok: true });   // client keeps its own optimistic state
   }
 
   return j({ error: "unknown action" }, 400);
@@ -417,12 +421,17 @@ function renderSwaps(){
 async function toggleFlag(iso, person){
   if(person!==ME){ return; }
   const k=`${iso}|${person}`, on=!FLAGS[k];
-  // optimistic
+  const prev = FLAGS[k];
+  // optimistic update — kept regardless of server response order
   if(on) FLAGS[k]={by:ME,at:Date.now()}; else delete FLAGS[k];
   render();
   const res = await api({action:"flag", date:iso, person, by:ME, on});
-  if(res.error){ alert("Save failed: "+res.error); }
-  else { FLAGS = res.flags || {}; render(); }
+  if(res && res.error){
+    // revert only this one flag on failure; never clobber the whole set
+    if(prev) FLAGS[k]=prev; else delete FLAGS[k];
+    render();
+    alert("Save failed: "+res.error);
+  }
 }
 </script>
 </body>
