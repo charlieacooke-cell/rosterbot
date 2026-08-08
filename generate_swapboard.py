@@ -79,6 +79,24 @@ def parse_roster(csv_path):
         if not name:
             break
         people.append((i, name))
+
+    # Drop SRMOs — they're a separate roster and don't swap.
+    # Auto-detect: anyone whose shifts are majority NSRMO/SSRMO (robust to name changes).
+    def is_srmo(col):
+        srmo = total = 0
+        for r in rows[1:]:
+            if col < len(r):
+                c = r[col].strip()
+                if c and c not in ("0", "1"):
+                    total += 1
+                    if c in ("NSRMO", "SSRMO"):
+                        srmo += 1
+        return total > 0 and srmo / total > 0.5
+
+    dropped = [n for i, n in people if is_srmo(i)]
+    people = [(i, n) for i, n in people if n not in dropped]
+    if dropped:
+        print(f"  ⓘ Excluded SRMOs: {', '.join(dropped)}")
     people_names = [n for _, n in people]
 
     roster = {}       # iso -> {person: code}
