@@ -24,3 +24,6 @@ swaps/.password
 netlify/functions/roster.js
 
 node_modules/
+
+# Roster PDFs contain colleagues personal data
+*.pdf

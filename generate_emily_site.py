@@ -27,6 +27,10 @@ except ImportError:
 XLSX_FILE    = "emily/FILE_8494.xlsx"
 SHEET_NAME   = "Term 2"
 
+# Term 3 — ICU Basic Trainee roster (PDF, weekly blocks). Newest version wins.
+PDF_FILE     = "emily/Term 3 2026 BT V6.pdf"
+PDF_PERSON   = "Emily Cooke"
+
 OUTPUT_HTML  = "emily/index.html"
 OUTPUT_ICS   = "emily/shifts.ics"
 SITE_TITLE   = "Is Emily Working?"
@@ -51,17 +55,26 @@ SHIFT_HOURS = {
     "wE14":  (14.0, 24.0),
     "M13":   (13.0, 23.0),
     "wM13":  (13.0, 23.0),
+    # Term 3 — ICU Basic Trainee. Letter = shift line (E/F/G/H), D = day, N = night.
+    "HD":    (8.0,  20.5),   # 08:00 – 20:30
+    "FD":    (8.0,  20.5),
+    "GD":    (8.0,  20.5),
+    "ED":    (8.0,  20.5),
+    "HN":    (20.0,  8.5),   # 20:00 – 08:30
+    "FN":    (20.0,  8.5),
+    "GN":    (20.0,  8.5),
+    "EN":    (20.0,  8.5),
 }
 
 DEFAULT_DAY_HOURS   = (8.0,  18.5)
 DEFAULT_NIGHT_HOURS = (22.5,  8.5)
 
-NIGHT_CODES     = {"N", "wN"}
+NIGHT_CODES     = {"N", "wN", "HN", "FN", "GN", "EN"}
 RELIEF_CODES    = {"SR"}
-LEAVE_CODES     = {"ADO10", "ADO"}
+LEAVE_CODES     = {"ADO10", "ADO", "AL", "ST L", "PL"}
 EVENING_CODES   = {"E10", "E10WE", "E10S"}
 AFTERNOON_CODES = {"E14", "wE14", "M13", "wM13"}
-DAY_CODES       = {"D8", "D10", "D10WE", "P10", "wD8"}
+DAY_CODES       = {"D8", "D10", "D10WE", "P10", "wD8", "HD", "FD", "GD", "ED"}
 
 SHIFT_LABELS = {
     # Term 2
@@ -83,6 +96,15 @@ SHIFT_LABELS = {
     "wE14":  "Afternoon Shift (Weekend)",
     "M13":   "Afternoon Shift",
     "wM13":  "Afternoon Shift (Weekend)",
+    # Term 3 — ICU Basic Trainee (letter = shift line)
+    "HD":    "ICU Day (H line)",
+    "FD":    "ICU Day (F line)",
+    "GD":    "ICU Day (G line)",
+    "ED":    "ICU Day (E line)",
+    "HN":    "ICU Night (H line)",
+    "FN":    "ICU Night (F line)",
+    "GN":    "ICU Night (G line)",
+    "EN":    "ICU Night (E line)",
     # Holiday override
     "AL":    "On Holidays! 🍹",
 }
@@ -240,6 +262,101 @@ def parse_roster(xlsx_path):
             }
 
     print(f"  ✓ Parsed {len(shifts)} shift entries for {PERSON_NAME}")
+    return shifts
+
+# ============================================================
+# TERM 3 — ICU BASIC TRAINEE PDF (weekly blocks)
+# ============================================================
+
+def parse_term3_pdf(pdf_path):
+    """
+    The Term 3 roster is a PDF grid: columns = weeks (Mon-start), rows = people.
+    A code in a week column means that person works that shift ALL 7 DAYS of the week.
+
+    We use `pdftotext -bbox-layout` to recover x/y coordinates, match the week
+    columns by x-position, then read the target person's row.
+
+    Annotations like "ADO 12-13" / "FN 26-29" carve out or restrict dates; Emily
+    has none this term, so we only parse bare codes and warn about anything else.
+    """
+    import subprocess, re, html as _html, tempfile, os
+    from collections import defaultdict
+
+    try:
+        out = tempfile.NamedTemporaryFile(suffix=".xhtml", delete=False)
+        out.close()
+        subprocess.run(["pdftotext", "-bbox-layout", str(pdf_path), out.name],
+                       check=True, capture_output=True)
+        doc = open(out.name, encoding="utf-8").read()
+        os.unlink(out.name)
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        print(f"  ⚠ Could not read PDF ({e}); skipping Term 3.")
+        return {}
+
+    word_re = re.compile(
+        r'<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">(.*?)</word>')
+    words = [(float(a), float(b), _html.unescape(e))
+             for a, b, c, d, e in word_re.findall(doc)]
+    if not words:
+        print("  ⚠ No text found in PDF; skipping Term 3.")
+        return {}
+
+    lines = defaultdict(list)
+    for x, y, t in words:
+        lines[round(y)].append((x, t))
+
+    # Locate the week-date header row and build x -> week-start-date map
+    MONTHS = {"Jan":1,"Feb":2,"Mar":3,"Apr":4,"May":5,"Jun":6,
+              "Jul":7,"Aug":8,"Sep":9,"Oct":10,"Nov":11,"Dec":12}
+    week_cols = []   # (x, date)
+    for y in sorted(lines):
+        items = sorted(lines[y])
+        toks = [t for _, t in items]
+        # header row looks like: 3 Aug 10 Aug 17 Aug ...
+        hits = [(items[i][0], items[i][1], items[i+1][1])
+                for i in range(len(items) - 1)
+                if items[i][1].isdigit() and items[i+1][1] in MONTHS]
+        if len(hits) >= 8:
+            for x, dnum, mon in hits:
+                week_cols.append((x, date(2026, MONTHS[mon], int(dnum))))
+            break
+
+    if not week_cols:
+        print("  ⚠ Could not find week header in PDF; skipping Term 3.")
+        return {}
+
+    def nearest_week(x):
+        return min(week_cols, key=lambda w: abs(w[0] - x))[1]
+
+    # Find the person's row
+    shifts = {}
+    first, last = PDF_PERSON.split()[0], PDF_PERSON.split()[-1]
+    for y in sorted(lines):
+        items = sorted(lines[y])
+        toks = [t for _, t in items]
+        if first in toks and last in toks:
+            for x, tok in items:
+                if x < week_cols[0][0] - 20:
+                    continue          # name / role columns
+                code = tok.strip()
+                if not code or code in ("/",):
+                    continue
+                if code not in SHIFT_HOURS:
+                    print(f"  ⚠ Unhandled Term 3 entry near {nearest_week(x)}: {code!r}")
+                    continue
+                monday = nearest_week(x)
+                stype  = classify(code)
+                for i in range(7):     # whole week, Mon-Sun
+                    d = monday + timedelta(days=i)
+                    shifts[d.isoformat()] = {
+                        "code": code, "type": stype, "label": label(code),
+                    }
+            break
+
+    if shifts:
+        print(f"  ✓ Term 3: {len(shifts)} days ({min(shifts)} → {max(shifts)})")
+    else:
+        print(f"  ⚠ No Term 3 entries found for {PDF_PERSON}")
     return shifts
 
 # ============================================================
@@ -1137,6 +1254,13 @@ def main():
         if iso not in shifts:
             shifts[iso] = info
     print(f"  ✓ Merged {len(OLD_SHIFTS)} historical shifts")
+
+    # Term 3 — ICU Basic Trainee (newest roster wins on any overlap)
+    pdf_path = script_dir / PDF_FILE
+    if pdf_path.exists():
+        shifts.update(parse_term3_pdf(pdf_path))
+    else:
+        print(f"  ⓘ No Term 3 PDF at {PDF_FILE} — skipping")
 
     # Apply holiday override for Jul 13–26
     d = HOLIDAY_START
