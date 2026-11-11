@@ -8,10 +8,21 @@ This guide will get the website live on a free URL in about 15 minutes.
 
 | File | What it does |
 |------|-------------|
-| `generate_site.py` | The script that reads the roster and builds the website |
-| `index.html` | The website (auto-generated — don't edit by hand) |
-| `shifts.ics` | Calendar subscription file (auto-generated) |
-| `2026 ICU Roster…csv` | Your copy of the roster |
+| `roster.py` | **The command.** Reads the rosters, builds the website and the feed |
+| `rosterlib.py` | Reads any sheet layout; keeps the archive that stops shifts going missing |
+| `charlie/index.html` | The website (auto-generated — don't edit by hand) |
+| `charlie/shifts.ics` | Calendar subscription file (auto-generated) |
+| `charlie/sources.json` | Which roster files to read |
+| `charlie/history.json` | Every shift ever published |
+| `codes/charlie.json` | What each shift code means and what hours it runs |
+
+To update after a new roster arrives:
+
+```bash
+python3 roster.py add charlie ~/Downloads/"new roster.xlsx"
+```
+
+`generate_site.py` only renders now — see CLAUDE.md for why.
 
 ---
 

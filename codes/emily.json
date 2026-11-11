@@ -1,0 +1,393 @@
+{
+ "default_day": [
+  "08:00",
+  "18:30"
+ ],
+ "default_night": [
+  "22:30",
+  "08:30"
+ ],
+ "codes": {
+  "A": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "Wards"
+  },
+  "ADO": {
+   "type": "off",
+   "label": "Rostered Day Off"
+  },
+  "ADO10": {
+   "type": "off",
+   "label": "Rostered Day Off"
+  },
+  "AL": {
+   "type": "holiday",
+   "label": "On Holidays! 🍹"
+  },
+  "B": {
+   "hours": [
+    "10:00",
+    "18:00"
+   ],
+   "type": "day",
+   "label": "B Shift"
+  },
+  "B*": {
+   "hours": [
+    "12:00",
+    "20:00"
+   ],
+   "type": "day",
+   "label": "B Shift (cover)"
+  },
+  "D": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "ICU Day Shift"
+  },
+  "D10": {
+   "hours": [
+    "08:00",
+    "18:30"
+   ],
+   "type": "day",
+   "label": "Day (10 hour)"
+  },
+  "D10WE": {
+   "hours": [
+    "07:00",
+    "17:30"
+   ],
+   "type": "day",
+   "label": "Day (10 hour, weekend)"
+  },
+  "D8": {
+   "hours": [
+    "07:00",
+    "15:30"
+   ],
+   "type": "day",
+   "label": "Day (8 hour)"
+  },
+  "E": {
+   "hours": [
+    "08:00",
+    "21:00"
+   ],
+   "type": "day",
+   "label": "On Call then Wards"
+  },
+  "E10": {
+   "hours": [
+    "14:00",
+    "24:00"
+   ],
+   "type": "evening",
+   "label": "Evening (10 hour)"
+  },
+  "E10S": {
+   "hours": [
+    "11:00",
+    "21:00"
+   ],
+   "type": "evening",
+   "label": "Evening (10 hour)"
+  },
+  "E10WE": {
+   "hours": [
+    "14:00",
+    "24:00"
+   ],
+   "type": "evening",
+   "label": "Evening (10 hour, weekend)"
+  },
+  "E14": {
+   "hours": [
+    "14:00",
+    "24:00"
+   ],
+   "type": "afternoon",
+   "label": "Afternoon Shift"
+  },
+  "ED": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "ICU Day (E line)"
+  },
+  "EMET": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "Emergency Medicine Education"
+  },
+  "EN": {
+   "hours": [
+    "20:00",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "ICU Night (E line)"
+  },
+  "EV": {
+   "hours": [
+    "14:30",
+    "22:30"
+   ],
+   "type": "afternoon",
+   "label": "Evening Shift"
+  },
+  "FD": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "ICU Day (F line)"
+  },
+  "FN": {
+   "hours": [
+    "20:00",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "ICU Night (F line)"
+  },
+  "GCTC": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "Training Committee"
+  },
+  "GD": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "ICU Day (G line)"
+  },
+  "GN": {
+   "hours": [
+    "20:00",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "ICU Night (G line)"
+  },
+  "HD": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "ICU Day (H line)"
+  },
+  "HN": {
+   "hours": [
+    "20:00",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "ICU Night (H line)"
+  },
+  "LD1": {
+   "hours": [
+    "08:00",
+    "21:00"
+   ],
+   "type": "day",
+   "label": "Long Day + Overtime"
+  },
+  "M13": {
+   "hours": [
+    "13:00",
+    "23:00"
+   ],
+   "type": "afternoon",
+   "label": "Afternoon Shift"
+  },
+  "N": {
+   "hours": [
+    "22:30",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "Night Shift"
+  },
+  "O": {
+   "hours": [
+    "10:00",
+    "18:30"
+   ],
+   "type": "day",
+   "label": "Ortho"
+  },
+  "P10": {
+   "hours": [
+    "08:00",
+    "18:30"
+   ],
+   "type": "day",
+   "label": "PNW (10 hour)"
+  },
+  "PL": {
+   "type": "off",
+   "label": "PL"
+  },
+  "S": {
+   "hours": [
+    "08:00",
+    "13:00"
+   ],
+   "type": "day",
+   "label": "Surgical Ward Cover"
+  },
+  "SC": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "Sick Cover / Back-up"
+  },
+  "SD": {
+   "hours": [
+    "07:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "ICU Short Day"
+  },
+  "SR": {
+   "type": "relief",
+   "label": "Sick Relief"
+  },
+  "ST L": {
+   "type": "off",
+   "label": "ST L"
+  },
+  "W": {
+   "hours": [
+    "07:45",
+    "15:15"
+   ],
+   "type": "day",
+   "label": "Weekend Ward Round"
+  },
+  "wD8": {
+   "hours": [
+    "08:00",
+    "18:00"
+   ],
+   "type": "day",
+   "label": "Day Shift (Weekend)"
+  },
+  "wE14": {
+   "hours": [
+    "14:00",
+    "24:00"
+   ],
+   "type": "afternoon",
+   "label": "Afternoon Shift (Weekend)"
+  },
+  "wM13": {
+   "hours": [
+    "13:00",
+    "23:00"
+   ],
+   "type": "afternoon",
+   "label": "Afternoon Shift (Weekend)"
+  },
+  "wN": {
+   "hours": [
+    "22:30",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "Night Shift (Weekend)"
+  },
+  "OC": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "Wards + On Call",
+   "note": "Sheet key: 'On Call Theatre/wards, commencing end of shift'. No finish time is given, so the rostered day is shown and the on-call tail is not. Correct the hours here if that is wrong."
+  },
+  "PH": {
+   "type": "off",
+   "label": "Public Holiday"
+  },
+  "RDO": {
+   "type": "off",
+   "label": "Rostered Day Off"
+  },
+  "OFF": {
+   "type": "off",
+   "label": "Day Off"
+  },
+  "N/OT": {
+   "type": "off",
+   "label": "Not Rostered"
+  }
+ },
+ "_comment": "Emily's shift codes, across every term so far. On her JMO roster a BLANK weekday means a normal ward day, which is what blank_weekday encodes; a blank weekend means not working. Add a code here when a new term brings one.",
+ "person": "Emily",
+ "blank_weekday": "A",
+ "blank_weekend": null,
+ "addable": [
+  {
+   "code": "D8",
+   "display": "Day (8 hour) – 7:00am to 3:30pm"
+  },
+  {
+   "code": "D10",
+   "display": "Day (10 hour) – 8:00am to 6:30pm"
+  },
+  {
+   "code": "D10WE",
+   "display": "Day (10 hour, weekend) – 7:00am to 5:30pm"
+  },
+  {
+   "code": "E10",
+   "display": "Evening (10 hour) – 2:00pm to midnight"
+  },
+  {
+   "code": "E10WE",
+   "display": "Evening (10 hour, weekend) – 2:00pm to midnight"
+  },
+  {
+   "code": "P10",
+   "display": "PNW (10 hour) – 8:00am to 6:30pm"
+  },
+  {
+   "code": "SR",
+   "display": "Sick Relief"
+  },
+  {
+   "code": "ADO10",
+   "display": "Rostered Day Off"
+  }
+ ],
+ "aliases": {
+  "D10 WE": "D10WE",
+  "E10 (1100 - 2100)": "E10S",
+  "LD1 ": "LD1"
+ },
+ "_type_note": "Type drives the website's wording and the calendar icon. Codes carrying hours get their type from the start time (>=20:00 night, >=13:00 afternoon, else day) unless they are leave. 14 Term 5 codes were typed 'off' when this file was first extracted, because the old Term 5 parser derived the type from the hours and bypassed the classifier these values came from."
+}

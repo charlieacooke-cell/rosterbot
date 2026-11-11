@@ -1,0 +1,23 @@
+{
+ "_comment": "Roster spreadsheets for Charlie, OLDEST FIRST. A later source wins only across the span of dates it actually covers, so adding next term cannot wipe this one. The files themselves are gitignored (they hold colleagues' shifts); charlie/history.json is the committed record of Charlie's own shifts, so a build still works when a file goes missing.",
+ "person": "Charlie",
+ "site": "charlie",
+ "codes": "codes/charlie.json",
+ "history": "charlie/history.json",
+ "year_hint": 2026,
+ "sources": [
+  {
+   "file": "charlie/2026 ICU Roster - Charlie Copy.xlsx",
+   "sheet": "Registrar",
+   "note": "2026 S1 (Feb-Aug)",
+   "added": "2026-06-29",
+   "why_this_copy": "Three other copies of the S1 roster are on disk and the root CSV (19 Apr) is the one the generator used to read. This download (29 Jun) is the newest fresh pull of the live S1 sheet and the only one that matches what has been published since: it has SN for 29 Jun-5 Jul where the others have SD, which reads as a swap made after April. The 'Registrar S1' tab inside the S2 workbook is newer as a file but is a carried-over historical tab, not a fresh pull, so it is not used."
+  },
+  {
+   "file": "charlie/2026 Second Half of year DRAFT.xlsx",
+   "sheet": "Registrar S2",
+   "note": "2026 S2 (Aug-Dec)",
+   "added": "2026-07-11"
+  }
+ ]
+}

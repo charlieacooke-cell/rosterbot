@@ -1,164 +1,103 @@
 #!/usr/bin/env python3
 """
-Charlie's Shift Site Generator
-================================
-Reads the ICU roster CSV and generates:
-  - index.html  (the "Is Charlie Working?" website)
-  - shifts.ics  (calendar subscription file)
+Charlie's Shift Site Generator — the renderer.
 
-HOW TO RUN:
-  python3 generate_site.py
+Turns a dict of shifts into:
+  - charlie/index.html  (the "Is Charlie Working?" website)
+  - charlie/shifts.ics  (the calendar subscription feed)
 
-HOW TO UPDATE (when the roster changes):
-  1. Download the new CSV from SharePoint (see SETUP.md for instructions)
-  2. Replace the CSV file in this folder
-  3. Run this script again
-  4. Push the updated files to GitHub (git add . && git commit -m "Update shifts" && git push)
+DO NOT RUN THIS TO PUBLISH A ROSTER UPDATE. Use:
 
-CUSTOMISATION:
-  Edit the CONFIG section below.
+    python3 roster.py build charlie          # rebuild from recorded sources
+    python3 roster.py add charlie <file>     # add a new roster sheet, then rebuild
+
+Why: this script used to read one hardcoded CSV. That CSV covered February to
+August only, so on 2026-11-12 regenerating the site produced 81 events against
+the 159 that were live — the August-December sheet had never been wired in and
+the published .ics was the only copy of it. roster.py reads every recorded
+source, merges onto charlie/history.json, and refuses to publish a feed that
+has lost shifts. Running this file directly now just calls it.
+
+Shift hours, types and labels all come from codes/charlie.json. Add a new code
+there, not here.
 """
 
-import csv
 import json
 import uuid
 from datetime import datetime, timedelta, date
 from pathlib import Path
 
+import rosterlib as R
+
 # ============================================================
-# CONFIG — edit these as needed
+# CONFIG
 # ============================================================
 
-CHARLIE_COLUMN_NAME = "Charlie"   # Name as it appears in the spreadsheet header
-
-CSV_FILE = "2026 ICU Roster - Charlie Copy CSV.csv"
 OUTPUT_HTML = "charlie/index.html"
 OUTPUT_ICS  = "charlie/shifts.ics"
+CODES_FILE  = "codes/charlie.json"
 
-# Site appearance
 SITE_TITLE    = "Is Charlie Working?"
 PERSON_NAME   = "Charlie"
 PERSON_EMOJI  = "🩺"
 
-# Per-shift hours as (start, end) in decimal 24hr — e.g. 8.5 = 08:30, 20.5 = 20:30
-# Night shifts: end time is next morning, so end < start
+# ============================================================
+# CODE TABLE — loaded, not hardcoded
+# ============================================================
+
+_TABLE = R.load_codes(Path(__file__).parent / CODES_FILE)
+
+DEFAULT_DAY_HOURS   = tuple(R.to_decimal(h) for h in _TABLE["default_day"])
+DEFAULT_NIGHT_HOURS = tuple(R.to_decimal(h) for h in _TABLE["default_night"])
+
 SHIFT_HOURS = {
-    "NN":       (20.0,  8.5),   # 20:00 – 08:30 (North POD Night)
-    "SN":       (20.0,  8.5),   # 20:00 – 08:30 (South POD Night)
-    "NFLOAT":   (20.0,  8.5),   # 20:00 – 08:30 (Night Float)
-    "SD":       (8.0,  20.5),   # 08:00 – 20:30 (South POD Day)
-    "ND":       (8.0,  20.5),   # 08:00 – 20:30 (North POD Day)
-    "DFLOAT":   (8.0,  20.5),   # 08:00 – 20:30 (Day Float)
-    "SR":       (8.0,  20.5),   # sick relief — day hours
-    "NICU":     (8.0,  17.0),   # 08:00 – 17:00
-    "Anaes/SR": (7.5,  17.5),   # 07:30 – 17:30 (from shifts sheet)
-    "NETS":     (7.5,  17.5),   # 07:30 – 17:30 (NETS Retrieval)
-    "APS":      (8.0,  16.5),   # 08:00 – 16:30 (Acute Pain Service)
-    "NSRMO":    (8.0,  16.5),   # 08:00 – 16:30 (North POD SRMO)
-    "SSRMO":    (8.0,  16.5),   # 08:00 – 16:30 (South POD SRMO)
+    code: tuple(R.to_decimal(h) for h in e["hours"])
+    for code, e in _TABLE["codes"].items() if e.get("hours")
 }
+SHIFT_LABELS = {code: e.get("label", code) for code, e in _TABLE["codes"].items()}
+CODE_TYPES   = {code: e.get("type", "day")  for code, e in _TABLE["codes"].items()}
 
-# Fallback for any unrecognised codes
-DEFAULT_DAY_HOURS   = (8.0,  20.5)
-DEFAULT_NIGHT_HOURS = (20.0,  8.5)
-
-# Shift classifications — add/remove codes as needed
-NIGHT_CODES  = {"NN", "SN", "NFLOAT"}           # North/South POD Night, Night Float
-DAY_CODES    = {"SD", "ND", "DFLOAT", "NICU", "Anaes/SR", "NETS", "APS", "NSRMO", "SSRMO"}  # ND = North POD Day
-RELIEF_CODES = {"SR"}
-LEAVE_CODES  = {"AL", "ADO", "SICK"}            # treated as "off" on the website
-IGNORE_CODES = {"NIGHT", "DAY", "Fellow"}        # Fellow shifts — not applicable
-
-# Human-readable labels for each code
-SHIFT_LABELS = {
-    "NN":       "North POD Night",
-    "SN":       "South POD Night",
-    "NFLOAT":   "Night Float",
-    "SD":       "South POD Day",
-    "ND":       "North POD Day",
-    "DFLOAT":   "Day Float",
-    "SR":       "Sick Relief",
-    "NICU":     "NICU Rotation",
-    "Anaes/SR": "Anaesthetics",
-    "NETS":     "NETS Retrieval",
-    "APS":      "Acute Pain Service",
-    "NSRMO":    "North POD SRMO",
-    "SSRMO":    "South POD SRMO",
-    "AL":       "Annual Leave",
-    "ADO":      "Day Off (Rostered)",
-    "SICK":     "Sick Day",
-}
 
 # ============================================================
 # CORE LOGIC
 # ============================================================
 
 def get_hours(code, shift_type):
-    """Return (start_decimal, end_decimal) for a given shift code."""
+    """Hours for a code, falling back to the default for its type."""
     if code in SHIFT_HOURS:
         return SHIFT_HOURS[code]
     return DEFAULT_NIGHT_HOURS if shift_type == "night" else DEFAULT_DAY_HOURS
+
+
+def hours_of(info):
+    """
+    Hours for one shift. The archived entry wins, because it was resolved when
+    the roster was read and stays right even if the code table later changes or
+    a historical code is retired from it.
+    """
+    if info.get("start") and info.get("end"):
+        return R.to_decimal(info["start"]), R.to_decimal(info["end"])
+    return get_hours(info["code"], info["type"])
+
 
 def decimal_to_hm(h):
     """Convert decimal hour to (hour, minute) tuple."""
     return int(h), round((h % 1) * 60)
 
+
 def classify(code):
     if not code or code in ("0", "1", "OFF"):
         return "off"
-    if code in IGNORE_CODES or code.startswith("Fellow"):
-        return "off"   # Fellow shifts — not applicable
-    if code in NIGHT_CODES:
-        return "night"
-    if code in DAY_CODES:
-        return "day"
-    if code in RELIEF_CODES:
-        return "relief"
-    if code in LEAVE_CODES:
-        return "off"
-    return "day"   # unknown codes treated as day
+    if code in CODE_TYPES:
+        return CODE_TYPES[code]
+    if code.startswith("Fellow"):
+        return "off"          # Fellow shifts — not applicable to a registrar
+    return "day"              # an unknown code is a working day until told otherwise
+
 
 def label(code):
     return SHIFT_LABELS.get(code, code)
 
-def parse_roster(csv_path):
-    """Parse the CSV and return a dict of {ISO-date-str: {code, type, label}}"""
-    shifts = {}
-    with open(csv_path, encoding="utf-8-sig") as f:
-        rows = list(csv.reader(f))
-
-    # Find Charlie's column
-    header = rows[0]
-    col = next(
-        (i for i, h in enumerate(header) if CHARLIE_COLUMN_NAME.lower() in h.lower()),
-        None
-    )
-    if col is None:
-        raise ValueError(f"Column '{CHARLIE_COLUMN_NAME}' not found in spreadsheet header: {header}")
-
-    for row in rows[2:]:   # skip 2 header rows
-        if len(row) < 3:
-            continue
-        date_raw = row[2].strip()
-        try:
-            d = datetime.strptime(date_raw, "%d-%b-%y").date()
-        except ValueError:
-            continue
-        code = row[col].strip() if len(row) > col else ""
-        if code and code not in ("0", "1"):
-            shifts[d.isoformat()] = {
-                "code":  code,
-                "type":  classify(code),
-                "label": label(code),
-            }
-
-    print(f"  ✓ Parsed {len(shifts)} shift entries for {CHARLIE_COLUMN_NAME}")
-    return shifts
-
-
-# ============================================================
-# ICS CALENDAR GENERATOR
-# ============================================================
 
 def generate_ics(shifts):
     lines = [
@@ -201,8 +140,9 @@ def generate_ics(shifts):
         lbl      = info["label"]
         uid      = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"charlie-{date_str}"))
 
-        sh, sm = decimal_to_hm(get_hours(code, stype)[0])
-        eh, em = decimal_to_hm(get_hours(code, stype)[1])
+        start, end = hours_of(info)
+        sh, sm = decimal_to_hm(start)
+        eh, em = decimal_to_hm(end)
 
         if stype == "night":
             dtstart = datetime(d.year, d.month, d.day, sh, sm)
@@ -974,34 +914,53 @@ def generate_html(shifts, generated_at):
 # MAIN
 # ============================================================
 
-def main():
+def render(shifts, table=None):
+    """
+    Write the website and the calendar feed from `shifts`.
+
+    Called by roster.py, which owns reading the spreadsheets and keeping
+    charlie/history.json. This function only renders — it never decides what
+    the roster is, which is the separation that makes losing shifts impossible
+    here.
+    """
     script_dir = Path(__file__).parent
-    csv_path   = script_dir / CSV_FILE
     html_path  = script_dir / OUTPUT_HTML
     ics_path   = script_dir / OUTPUT_ICS
 
-    print("🏥 Charlie's Shift Site Generator")
-    print("=" * 40)
-
-    if not csv_path.exists():
-        print(f"\n❌ CSV not found: {csv_path}")
-        print("   Make sure the roster CSV is in the same folder as this script.")
-        return
-
-    print(f"\n📂 Reading: {csv_path.name}")
-    shifts = parse_roster(csv_path)
-
     generated_at = datetime.now().strftime("%d %b %Y at %H:%M")
+    html_path.parent.mkdir(exist_ok=True)
 
-    print(f"\n🌐 Writing: {OUTPUT_HTML}")
-    html_path.write_text(generate_html(shifts, generated_at), encoding="utf-8")
+    # The page only needs code, type and label; it looks hours up from HOURS by
+    # code. Sending the archive's start/end/source as well would put ~10 KB of
+    # build bookkeeping into a public page people load on mobile data.
+    for_page = {k: {"code": v["code"], "type": v["type"], "label": v["label"]}
+                for k, v in shifts.items()}
+    html_path.write_text(generate_html(for_page, generated_at), encoding="utf-8")
 
-    print(f"📅 Writing: {OUTPUT_ICS}")
-    ics_path.write_text(generate_ics(shifts), encoding="utf-8")
+    ics = generate_ics(shifts)
+    ics_path.write_text(ics, encoding="utf-8")
 
-    print(f"\n✅ Done! Generated at {generated_at}")
-    print(f"\n   Open {html_path} in a browser to preview the site.")
-    print(f"   Push both files to GitHub Pages to publish it.")
+    events = ics.count("BEGIN:VEVENT")
+    from collections import Counter
+    counts = Counter(v["type"] for v in shifts.values())
+    print(f"\n🌐 {OUTPUT_HTML}: {len(shifts)} dated entries")
+    print(f"📅 {OUTPUT_ICS}: {events} events "
+          f"({', '.join(f'{n} {t}' for t, n in sorted(counts.items()))})")
+    print(f"   {generated_at}")
+    return events
+
+
+def main():
+    """Running this file directly rebuilds through roster.py, deliberately.
+
+    Typing `python3 generate_site.py` out of habit is how the 81-event feed
+    nearly got published, so the old entry point now does the safe thing
+    instead of the thing it used to do.
+    """
+    import subprocess, sys
+    print("↪ generate_site.py only renders now — handing over to roster.py\n")
+    sys.exit(subprocess.call(
+        [sys.executable, str(Path(__file__).parent / "roster.py"), "build", "charlie"]))
 
 
 if __name__ == "__main__":

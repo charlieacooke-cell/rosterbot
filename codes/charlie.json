@@ -1,0 +1,144 @@
+{
+ "default_day": [
+  "08:00",
+  "20:30"
+ ],
+ "default_night": [
+  "20:00",
+  "08:30"
+ ],
+ "codes": {
+  "ADO": {
+   "type": "off",
+   "label": "Day Off (Rostered)"
+  },
+  "AL": {
+   "type": "off",
+   "label": "Annual Leave"
+  },
+  "APS": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "Acute Pain Service"
+  },
+  "Anaes/SR": {
+   "hours": [
+    "07:30",
+    "17:30"
+   ],
+   "type": "day",
+   "label": "Anaesthetics"
+  },
+  "DAY": {
+   "type": "off",
+   "label": "DAY"
+  },
+  "DFLOAT": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "Day Float"
+  },
+  "Fellow": {
+   "type": "off",
+   "label": "Fellow"
+  },
+  "ND": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "North POD Day"
+  },
+  "NETS": {
+   "hours": [
+    "07:30",
+    "17:30"
+   ],
+   "type": "day",
+   "label": "NETS Retrieval"
+  },
+  "NFLOAT": {
+   "hours": [
+    "20:00",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "Night Float"
+  },
+  "NICU": {
+   "hours": [
+    "08:00",
+    "17:00"
+   ],
+   "type": "day",
+   "label": "NICU Rotation"
+  },
+  "NIGHT": {
+   "type": "off",
+   "label": "NIGHT"
+  },
+  "NN": {
+   "hours": [
+    "20:00",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "North POD Night"
+  },
+  "NSRMO": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "North POD SRMO"
+  },
+  "SD": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "day",
+   "label": "South POD Day"
+  },
+  "SICK": {
+   "type": "off",
+   "label": "Sick Day"
+  },
+  "SN": {
+   "hours": [
+    "20:00",
+    "08:30"
+   ],
+   "type": "night",
+   "label": "South POD Night"
+  },
+  "SR": {
+   "hours": [
+    "08:00",
+    "20:30"
+   ],
+   "type": "relief",
+   "label": "Sick Relief"
+  },
+  "SSRMO": {
+   "hours": [
+    "08:00",
+    "16:30"
+   ],
+   "type": "day",
+   "label": "South POD SRMO"
+  }
+ },
+ "_comment": "Charlie's shift codes. One place for hours, type and label: the website, the calendar feed and the parser all read this file. Add a code here when a new one turns up on the roster — no code change needed. Hours are 24hr local; a night shift's end is the next morning, so end < start.",
+ "person": "Charlie",
+ "blank_weekday": null,
+ "blank_weekend": null
+}

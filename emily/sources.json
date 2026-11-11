@@ -1,0 +1,30 @@
+{
+ "_comment": "Roster spreadsheets for Emily, OLDEST FIRST. Her roster changes format every term, which is why nothing here names a column or a row. Terms before Term 5 have no source file left: they live in emily/history.json, which is why a build does not need them.",
+ "person": "Emily Cooke",
+ "site": "emily",
+ "codes": "codes/emily.json",
+ "history": "emily/history.json",
+ "year_hint": 2026,
+ "sources": [
+  {
+   "file": "emily/FILE_8494.xlsx",
+   "sheet": "Term 2",
+   "note": "Term 2 (Jun-Sep)",
+   "added": "2026-06-09"
+  },
+  {
+   "file": "emily/JMO Roster Term 5 2026.xlsx",
+   "sheet": null,
+   "note": "Term 5 (Nov-Feb)",
+   "added": "2026-11-11"
+  }
+ ],
+ "overrides": [
+  {
+   "from": "2026-07-13",
+   "to": "2026-07-26",
+   "code": "AL",
+   "note": "holidays — the term sheet still shows her as rostered"
+  }
+ ]
+}

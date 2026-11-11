@@ -1,536 +1,100 @@
 #!/usr/bin/env python3
 """
-Emily's Shift Site Generator
-================================
-Reads the Paeds ED roster Excel file and generates:
-  - emily/index.html  (the "Is Emily Working?" website)
-  - emily/shifts.ics  (calendar subscription file)
+Emily's Shift Site Generator — the renderer.
 
-HOW TO RUN:
-  python3 generate_emily_site.py
+Turns a dict of shifts into:
+  - emily/index.html  (the "Is Emily Working?" website)
+  - emily/shifts.ics  (the calendar subscription feed)
+
+DO NOT RUN THIS TO PUBLISH A ROSTER UPDATE. Use:
+
+    python3 roster.py add emily ~/Downloads/"JMO Roster Term 6.xlsx"
+    python3 roster.py build emily
+
+Why: Emily's roster arrives in a different shape every term, and this file used
+to grow a bespoke parser per term — one for Term 2's two-week blocks, one for
+the Term 3 PDF, one for Term 5's 77-column grid — each nailed to a hardcoded
+filename. Terms whose source file was lost were pasted in as a literal dict.
+rosterlib reads the layout off the sheet instead, and emily/history.json keeps
+every shift ever published, so a lost spreadsheet no longer means lost shifts
+and a new term needs no new code.
+
+Shift hours, types, labels and the edit panel's dropdown all come from
+codes/emily.json. Add a new term's codes there, not here.
 """
 
 import json
-import re
 import uuid
 from datetime import datetime, timedelta, date
 from pathlib import Path
 
-try:
-    import openpyxl
-except ImportError:
-    raise SystemExit("Missing dependency: run  pip3 install openpyxl  then try again.")
+import rosterlib as R
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-XLSX_FILE    = "emily/FILE_8494.xlsx"
-SHEET_NAME   = "Term 2"
-
-# Term 3 — ICU Basic Trainee roster (PDF, weekly blocks). Newest version wins.
-PDF_FILE     = "emily/Term 3 2026 BT V6.pdf"
-PDF_PERSON   = "Emily Cooke"
-
-# Term 5 — JMO roster, a WIDE grid: 11 weeks run left to right across ~77 columns,
-# not down the sheet. Newest term wins on any overlap.
-TERM5_FILE   = "emily/JMO Roster Term 5 2026.xlsx"
-TERM5_PERSON = "Emily Cooke"
-
 OUTPUT_HTML  = "emily/index.html"
 OUTPUT_ICS   = "emily/shifts.ics"
+CODES_FILE   = "codes/emily.json"
 SITE_TITLE   = "Is Emily Working?"
 PERSON_NAME  = "Emily"
 PERSON_EMOJI = "💉"
 
-# ── Shift hours (start, end) decimal 24hr ─────────────────
+# ============================================================
+# CODE TABLE — loaded, not hardcoded
+# ============================================================
+
+_TABLE = R.load_codes(Path(__file__).parent / CODES_FILE)
+
+DEFAULT_DAY_HOURS   = tuple(R.to_decimal(h) for h in _TABLE["default_day"])
+DEFAULT_NIGHT_HOURS = tuple(R.to_decimal(h) for h in _TABLE["default_night"])
+
 SHIFT_HOURS = {
-    # Term 5 — JMO roster. Hours taken from the sheet's own two key blocks
-    # (cols J/K and cols U/V), never guessed.
-    "A":    (8.0,  16.5),   # Wards 0800-1630 — also what a BLANK weekday means
-    "B":    (10.0, 18.0),   # B shift 1000-1800
-    "B*":   (12.0, 20.0),   # assisting other teams / discharges
-    "W":    (7.75, 15.25),  # Weekend ward round 0745-1515
-    "S":    (8.0,  13.0),   # Surgical ward cover
-    "O":    (10.0, 18.5),   # Ortho
-    "E":    (8.0,  21.0),   # On call 0800-1430 then wards until 2100/2200
-    "LD1":  (8.0,  21.0),   # Rostered duty then rostered O/T until 2100/2200
-    "SC":   (8.0,  16.5),   # Back-up for Evening/LD1/OC plus sick cover
-    "GCTC": (8.0,  16.5),   # General Clinical Training Committee
-    "EMET": (8.0,  16.5),   # Emergency Medicine Education and Training
-    "D":    (8.0,  20.5),   # ICU day
-    "SD":   (7.0,  16.5),   # ICU short day
-    "EV":   (14.5, 22.5),   # 1430-2230
-    # Term 2 — resident codes
-    "D8":    (7.0,  15.5),   # 07:00 – 15:30
-    "D10":   (8.0,  18.5),   # 08:00 – 18:30
-    "D10WE": (7.0,  17.5),   # 07:00 – 17:30
-    "E10":   (14.0, 24.0),   # 14:00 – 00:00
-    "E10WE": (14.0, 24.0),   # 14:00 – 00:00
-    "E10S":  (11.0, 21.0),   # 11:00 – 21:00  (orientation one-off)
-    "P10":   (8.0,  18.5),   # 08:00 – 18:30  (PNW)
-    # Previous term — kept so old shifts display correctly
-    "wD8":   (8.0,  18.0),
-    "N":     (22.5,  8.5),
-    "wN":    (22.5,  8.5),
-    "E14":   (14.0, 24.0),
-    "wE14":  (14.0, 24.0),
-    "M13":   (13.0, 23.0),
-    "wM13":  (13.0, 23.0),
-    # Term 3 — ICU Basic Trainee. Letter = shift line (E/F/G/H), D = day, N = night.
-    "HD":    (8.0,  20.5),   # 08:00 – 20:30
-    "FD":    (8.0,  20.5),
-    "GD":    (8.0,  20.5),
-    "ED":    (8.0,  20.5),
-    "HN":    (20.0,  8.5),   # 20:00 – 08:30
-    "FN":    (20.0,  8.5),
-    "GN":    (20.0,  8.5),
-    "EN":    (20.0,  8.5),
+    code: tuple(R.to_decimal(h) for h in e["hours"])
+    for code, e in _TABLE["codes"].items() if e.get("hours")
 }
+SHIFT_LABELS = {code: e.get("label", code) for code, e in _TABLE["codes"].items()}
+CODE_TYPES   = {code: e.get("type", "day")  for code, e in _TABLE["codes"].items()}
 
-DEFAULT_DAY_HOURS   = (8.0,  18.5)
-DEFAULT_NIGHT_HOURS = (22.5,  8.5)
+# Codes offered in the website's own edit panel
+ADDABLE_SHIFTS = [(a["code"], a["display"]) for a in _TABLE.get("addable", [])]
 
-NIGHT_CODES     = {"N", "wN", "HN", "FN", "GN", "EN"}
-RELIEF_CODES    = {"SR"}
-LEAVE_CODES     = {"ADO10", "ADO", "AL", "ST L", "PL"}
-EVENING_CODES   = {"E10", "E10WE", "E10S"}
-AFTERNOON_CODES = {"E14", "wE14", "M13", "wM13"}
-DAY_CODES       = {"D8", "D10", "D10WE", "P10", "wD8", "HD", "FD", "GD", "ED"}
-
-SHIFT_LABELS = {
-    # Term 2
-    "D8":    "Day (8 hour)",
-    "D10":   "Day (10 hour)",
-    "D10WE": "Day (10 hour, weekend)",
-    "E10":   "Evening (10 hour)",
-    "E10WE": "Evening (10 hour, weekend)",
-    "E10S":  "Evening (10 hour)",
-    "P10":   "PNW (10 hour)",
-    "SR":    "Sick Relief",
-    "ADO10": "Rostered Day Off",
-    "ADO":   "Rostered Day Off",
-    # Previous term
-    "wD8":   "Day Shift (Weekend)",
-    "N":     "Night Shift",
-    "wN":    "Night Shift (Weekend)",
-    "E14":   "Afternoon Shift",
-    "wE14":  "Afternoon Shift (Weekend)",
-    "M13":   "Afternoon Shift",
-    "wM13":  "Afternoon Shift (Weekend)",
-    # Term 3 — ICU Basic Trainee (letter = shift line)
-    "HD":    "ICU Day (H line)",
-    "FD":    "ICU Day (F line)",
-    "GD":    "ICU Day (G line)",
-    "ED":    "ICU Day (E line)",
-    "HN":    "ICU Night (H line)",
-    "FN":    "ICU Night (F line)",
-    "GN":    "ICU Night (G line)",
-    "EN":    "ICU Night (E line)",
-    # Holiday override
-    "AL":    "On Holidays! 🍹",
-}
-
-# Codes shown in the edit panel add-shift dropdown
-ADDABLE_SHIFTS = [
-    ("D8",    "Day (8 hour) – 7:00am to 3:30pm"),
-    ("D10",   "Day (10 hour) – 8:00am to 6:30pm"),
-    ("D10WE", "Day (10 hour, weekend) – 7:00am to 5:30pm"),
-    ("E10",   "Evening (10 hour) – 2:00pm to midnight"),
-    ("E10WE", "Evening (10 hour, weekend) – 2:00pm to midnight"),
-    ("P10",   "PNW (10 hour) – 8:00am to 6:30pm"),
-    ("SR",    "Sick Relief"),
-    ("ADO10", "Rostered Day Off"),
-]
-
-# ── Hardcoded shifts from previous term ───────────────────
-# Recovered from the previous Netlify deploy. Do not edit.
-OLD_SHIFTS = {
-    "2026-04-27": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
-    "2026-04-28": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
-    "2026-04-29": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
-    "2026-05-04": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-05-05": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-05-06": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-05-10": {"code": "wM13", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
-    "2026-05-11": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
-    "2026-05-12": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
-    "2026-05-13": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
-    "2026-05-18": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-05-19": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-05-20": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-05-21": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-05-22": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-05-27": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-05-28": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-05-29": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-05-30": {"code": "wD8",  "type": "day",       "label": "Day Shift (Weekend)"},
-    "2026-06-03": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-06-04": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-06-05": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-06-08": {"code": "wN",   "type": "night",     "label": "Night Shift (Weekend)"},
-    "2026-06-09": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-06-10": {"code": "N",    "type": "night",     "label": "Night Shift"},
-    "2026-06-14": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
-    "2026-06-15": {"code": "E14",  "type": "afternoon", "label": "Afternoon Shift"},
-    "2026-06-19": {"code": "D8",   "type": "day",       "label": "Day Shift"},
-    "2026-06-20": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
-    "2026-06-21": {"code": "wE14", "type": "afternoon", "label": "Afternoon Shift (Weekend)"},
-}
-
-# ── Holiday override ───────────────────────────────────────
-HOLIDAY_START = date(2026, 7, 13)
-HOLIDAY_END   = date(2026, 7, 26)
 
 # ============================================================
 # CORE LOGIC
 # ============================================================
-
-def normalize_code(raw):
-    """Normalise a raw cell value to a canonical shift code."""
-    if not raw:
-        return ""
-    s = str(raw).strip()
-    # Orientation-week special: "E10 (1100 - 2100)" → E10S
-    if s.upper().startswith("E10 ("):
-        return "E10S"
-    # Collapse "D10 WE" / "D10 WE " → "D10WE"
-    s = s.replace(" WE", "WE")
-    return s
 
 def get_hours(code, shift_type="day"):
     if code in SHIFT_HOURS:
         return SHIFT_HOURS[code]
     return DEFAULT_NIGHT_HOURS if shift_type == "night" else DEFAULT_DAY_HOURS
 
+
+def hours_of(info):
+    """
+    Hours for one shift. The archived entry wins: it was resolved when that
+    term's roster was read, so it stays right even for a code no longer in the
+    table.
+    """
+    if info.get("start") and info.get("end"):
+        return R.to_decimal(info["start"]), R.to_decimal(info["end"])
+    return get_hours(info["code"], info["type"])
+
+
 def decimal_to_hm(h):
-    h = h % 24
     return int(h), round((h % 1) * 60)
 
+
 def classify(code):
-    if not code or code in ("None", "0", "1"):
+    if not code or code in ("0", "1", "OFF"):
         return "off"
-    if code in NIGHT_CODES:
-        return "night"
-    if code in RELIEF_CODES:
-        return "relief"
-    if code in LEAVE_CODES:
-        return "off"
-    if code in EVENING_CODES:
-        return "evening"
-    if code in AFTERNOON_CODES:
-        return "afternoon"
-    if code in DAY_CODES:
-        return "day"
-    return "off"
+    return CODE_TYPES.get(code, "day")
+
 
 def label(code):
     return SHIFT_LABELS.get(code, code)
 
-def parse_roster(xlsx_path):
-    """
-    Parses the Term 2 grid layout.
-
-    The sheet has blocks of 2 weeks: a date row (col B–O contain datetime
-    objects), followed by person rows (col A = name, same cols = shift codes).
-    We scan linearly: when we hit a date row we cache the dates; when we hit
-    Emily's row we map her codes to those dates.
-    """
-    wb = openpyxl.load_workbook(xlsx_path, data_only=True)
-    ws = wb[SHEET_NAME]
-
-    shifts = {}
-    current_dates = {}  # col_idx (1-based) → date
-
-    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
-        col_b = row[1].value  # column B (0-based index 1)
-
-        # Date row: col B holds a datetime object
-        if isinstance(col_b, (datetime, date)):
-            current_dates = {}
-            for cell in row[1:15]:  # cols B–O
-                val = cell.value
-                if isinstance(val, (datetime, date)):
-                    d = val.date() if isinstance(val, datetime) else val
-                    if d.year < 2026:
-                        d = d.replace(year=2026)
-                    current_dates[cell.column] = d
-            continue
-
-        # Person row: col A must name Emily
-        col_a = row[0].value
-        if not col_a or not isinstance(col_a, str):
-            continue
-        name = col_a.strip()
-        if "Emily Cooke" not in name or "Reliever for" in name:
-            continue
-
-        # Map Emily's shift codes to their dates
-        if not current_dates:
-            continue
-        row_num = row[0].row
-        for col_idx, shift_date in current_dates.items():
-            raw  = ws.cell(row=row_num, column=col_idx).value
-            code = normalize_code(raw)
-            if not code or code in ("None", "0", "1"):
-                continue
-            stype = classify(code)
-            if stype == "off":
-                continue
-            shifts[shift_date.isoformat()] = {
-                "code":  code,
-                "type":  stype,
-                "label": label(code),
-            }
-
-    print(f"  ✓ Parsed {len(shifts)} shift entries for {PERSON_NAME}")
-    return shifts
-
-# ============================================================
-# TERM 3 — ICU BASIC TRAINEE PDF (weekly blocks)
-# ============================================================
-
-def parse_term3_pdf(pdf_path):
-    """
-    The Term 3 roster is a PDF grid: columns = weeks (Mon-start), rows = people.
-    A code in a week column means that person works that shift ALL 7 DAYS of the week.
-
-    We use `pdftotext -bbox-layout` to recover x/y coordinates, match the week
-    columns by x-position, then read the target person's row.
-
-    Annotations like "ADO 12-13" / "FN 26-29" carve out or restrict dates; Emily
-    has none this term, so we only parse bare codes and warn about anything else.
-    """
-    import subprocess, re, html as _html, tempfile, os
-    from collections import defaultdict
-
-    try:
-        out = tempfile.NamedTemporaryFile(suffix=".xhtml", delete=False)
-        out.close()
-        subprocess.run(["pdftotext", "-bbox-layout", str(pdf_path), out.name],
-                       check=True, capture_output=True)
-        doc = open(out.name, encoding="utf-8").read()
-        os.unlink(out.name)
-    except (FileNotFoundError, subprocess.CalledProcessError) as e:
-        print(f"  ⚠ Could not read PDF ({e}); skipping Term 3.")
-        return {}
-
-    word_re = re.compile(
-        r'<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">(.*?)</word>')
-    words = [(float(a), float(b), _html.unescape(e))
-             for a, b, c, d, e in word_re.findall(doc)]
-    if not words:
-        print("  ⚠ No text found in PDF; skipping Term 3.")
-        return {}
-
-    lines = defaultdict(list)
-    for x, y, t in words:
-        lines[round(y)].append((x, t))
-
-    # Locate the week-date header row and build x -> week-start-date map
-    MONTHS = {"Jan":1,"Feb":2,"Mar":3,"Apr":4,"May":5,"Jun":6,
-              "Jul":7,"Aug":8,"Sep":9,"Oct":10,"Nov":11,"Dec":12}
-    week_cols = []   # (x, date)
-    for y in sorted(lines):
-        items = sorted(lines[y])
-        toks = [t for _, t in items]
-        # header row looks like: 3 Aug 10 Aug 17 Aug ...
-        hits = [(items[i][0], items[i][1], items[i+1][1])
-                for i in range(len(items) - 1)
-                if items[i][1].isdigit() and items[i+1][1] in MONTHS]
-        if len(hits) >= 8:
-            for x, dnum, mon in hits:
-                week_cols.append((x, date(2026, MONTHS[mon], int(dnum))))
-            break
-
-    if not week_cols:
-        print("  ⚠ Could not find week header in PDF; skipping Term 3.")
-        return {}
-
-    def nearest_week(x):
-        return min(week_cols, key=lambda w: abs(w[0] - x))[1]
-
-    # Find the person's row
-    shifts = {}
-    first, last = PDF_PERSON.split()[0], PDF_PERSON.split()[-1]
-    for y in sorted(lines):
-        items = sorted(lines[y])
-        toks = [t for _, t in items]
-        if first in toks and last in toks:
-            for x, tok in items:
-                if x < week_cols[0][0] - 20:
-                    continue          # name / role columns
-                code = tok.strip()
-                if not code or code in ("/",):
-                    continue
-                if code not in SHIFT_HOURS:
-                    print(f"  ⚠ Unhandled Term 3 entry near {nearest_week(x)}: {code!r}")
-                    continue
-                monday = nearest_week(x)
-                stype  = classify(code)
-                for i in range(7):     # whole week, Mon-Sun
-                    d = monday + timedelta(days=i)
-                    shifts[d.isoformat()] = {
-                        "code": code, "type": stype, "label": label(code),
-                    }
-            break
-
-    if shifts:
-        print(f"  ✓ Term 3: {len(shifts)} days ({min(shifts)} → {max(shifts)})")
-    else:
-        print(f"  ⚠ No Term 3 entries found for {PDF_PERSON}")
-    return shifts
-
-
-# ============================================================
-# TERM 5 PARSER — wide grid
-# ============================================================
-
-# Codes that mean she is NOT working. RDO appears with varying trailing
-# whitespace in the sheet (requested / approved / rostered are distinguished
-# only by that), so everything is stripped before comparison.
-TERM5_NOT_WORKING = {"RDO", "PH", "OFF", "AL", "N/OT"}
-
-# Codes that are a day off the ward rather than a different shift; they still
-# occupy a normal working day.
-TERM5_LABELS = {
-    "A":    "Wards",
-    "B":    "B Shift",
-    "B*":   "B Shift (cover)",
-    "W":    "Weekend Ward Round",
-    "S":    "Surgical Ward Cover",
-    "O":    "Ortho",
-    "E":    "On Call then Wards",
-    "LD1":  "Long Day + Overtime",
-    "SC":   "Sick Cover / Back-up",
-    "GCTC": "Training Committee",
-    "EMET": "EMET Training",
-    "D":    "ICU Day Shift",
-    "N":    "ICU Night Shift",
-    "SD":   "ICU Short Day",
-    "EV":   "Evening Shift",
-}
-
-
-def parse_term5_xlsx(path):
-    """
-    Term 5 grid runs LEFT TO RIGHT: ~11 weeks across ~77 columns, one block.
-
-    Two things make this sheet hostile to a naive reader, both found 2026-11-11:
-
-    1. The columns are NOT a contiguous run of days. Assuming date = start + (col - 3)
-       drifts by a day before February. The day numbers in the header row are the only
-       truth, so the month is rolled over whenever the number drops.
-    2. A BLANK weekday means a normal working day (0800-1630), not a day off. Codes mark
-       the exceptions. Reading blanks as "not working" gives Emily 4 shifts in 11 weeks
-       instead of about 50.
-    """
-    wb = openpyxl.load_workbook(path, data_only=True)
-    ws = wb[wb.sheetnames[0]]
-
-    # Locate the header rows: the term row carries the month names.
-    term_row = None
-    for r in range(1, 60):
-        v = ws.cell(row=r, column=1).value
-        if isinstance(v, str) and v.strip().upper().startswith("TERM"):
-            term_row = r
-            break
-    if term_row is None:
-        print("  ⚠️  Term 5: no 'TERM' header row found — skipping")
-        return {}
-
-    # The day-number row is whichever of the next few rows holds the most integers.
-    day_row, best = None, 0
-    for r in range(term_row, term_row + 8):
-        n = sum(1 for c in range(3, ws.max_column + 1)
-                if isinstance(ws.cell(row=r, column=c).value, int))
-        if n > best:
-            day_row, best = r, n
-    if not day_row or best < 20:
-        print("  ⚠️  Term 5: no day-number row found — skipping")
-        return {}
-
-    # Starting month comes from the first month name on the term row.
-    MONTHS = {m.lower(): i for i, m in enumerate(
-        ["January", "February", "March", "April", "May", "June", "July",
-         "August", "September", "October", "November", "December"], 1)}
-    year, month = 2026, None
-    for c in range(1, ws.max_column + 1):
-        v = ws.cell(row=term_row, column=c).value
-        if isinstance(v, str):
-            key = v.strip().lower()[:3]
-            for name, num in MONTHS.items():
-                if name.startswith(key) and len(key) >= 3:
-                    month = num
-                    break
-        if month:
-            break
-    if not month:
-        print("  ⚠️  Term 5: no month name on the term row — skipping")
-        return {}
-    m = re.search(r"(20\d\d)", str(ws.cell(row=term_row, column=1).value) or "")
-    if m:
-        year = int(m.group(1))
-
-    colmap, prev = {}, None
-    for c in range(3, ws.max_column + 1):
-        v = ws.cell(row=day_row, column=c).value
-        if not isinstance(v, int):
-            continue
-        if prev is not None and v < prev:
-            month += 1
-            if month == 13:
-                month, year = 1, year + 1
-        try:
-            colmap[c] = date(year, month, v)
-        except ValueError:
-            continue
-        prev = v
-    if not colmap:
-        return {}
-
-    # Emily's row
-    person_row = None
-    for r in range(1, ws.max_row + 1):
-        v = ws.cell(row=r, column=2).value
-        if isinstance(v, str) and TERM5_PERSON.lower() in v.lower():
-            person_row = r
-            break
-    if person_row is None:
-        print(f"  ⚠️  Term 5: {TERM5_PERSON} not found — skipping")
-        return {}
-
-    shifts, off = {}, 0
-    for c, d in sorted(colmap.items()):
-        raw = ws.cell(row=person_row, column=c).value
-        code = raw.strip() if isinstance(raw, str) else ""
-
-        if code.upper() in TERM5_NOT_WORKING:
-            off += 1
-            continue
-        if not code:
-            # Blank weekday = a normal rostered day. Blank weekend = not working.
-            if d.weekday() >= 5:
-                continue
-            code = "A"
-        if code not in SHIFT_HOURS:
-            print(f"  ⚠️  Term 5: unknown code {code!r} on {d} — left out of the feed")
-            continue
-
-        start, _ = SHIFT_HOURS[code]
-        kind = "night" if start >= 20 else ("afternoon" if start >= 13 else "day")
-        label = TERM5_LABELS.get(code, code)
-        if d.weekday() >= 5 and "Weekend" not in label:
-            label += " (Weekend)"
-        shifts[d.isoformat()] = {"code": code, "type": kind, "label": label}
-
-    print(f"  ✓ Term 5: {len(shifts)} working days, {off} off "
-          f"({min(colmap.values())} to {max(colmap.values())})")
-    return shifts
-
-# ============================================================
-# ICS CALENDAR GENERATOR
-# ============================================================
 
 def generate_ics(shifts):
     lines = [
@@ -571,8 +135,9 @@ def generate_ics(shifts):
         stype = info["type"]
         lbl   = info["label"]
         uid   = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"emily-{date_str}"))
-        sh, sm = decimal_to_hm(get_hours(code, stype)[0])
-        eh, em = decimal_to_hm(get_hours(code, stype)[1])
+        start_h, end_h = hours_of(info)
+        sh, sm = decimal_to_hm(start_h)
+        eh, em = decimal_to_hm(end_h)
         if stype == "night":
             dtstart = datetime(d.year, d.month, d.day, sh, sm)
             dtend   = datetime(d.year, d.month, d.day, eh, em) + timedelta(days=1)
@@ -586,7 +151,6 @@ def generate_ics(shifts):
                 "END:VEVENT",
             ]
         elif stype in ("day", "afternoon", "evening", "relief"):
-            end_h = get_hours(code, stype)[1]
             dtstart = datetime(d.year, d.month, d.day, sh, sm)
             dtend   = (datetime(d.year, d.month, d.day, 0, 0) + timedelta(days=1)
                        if end_h >= 24
@@ -1418,72 +982,46 @@ def generate_html(shifts, generated_at):
 # MAIN
 # ============================================================
 
-def main():
+def render(shifts, table=None):
+    """
+    Write the website and the calendar feed from `shifts`.
+
+    Called by roster.py, which owns reading the spreadsheets and keeping
+    emily/history.json. This function only renders.
+    """
     script_dir = Path(__file__).parent
-    xlsx_path  = script_dir / XLSX_FILE
     html_path  = script_dir / OUTPUT_HTML
     ics_path   = script_dir / OUTPUT_ICS
 
-    print("🏥 Emily's Shift Site Generator")
-    print("=" * 40)
+    generated_at = datetime.now().strftime("%d %b %Y at %H:%M")
+    html_path.parent.mkdir(exist_ok=True)
 
-    if not xlsx_path.exists():
-        desktop = Path.home() / "Desktop" / XLSX_FILE
-        if desktop.exists():
-            xlsx_path = desktop
-            print(f"  (found on Desktop — copy it here for easier future updates)")
-        else:
-            print(f"\n❌ Excel file not found: {xlsx_path}")
-            print(f"   Copy '{XLSX_FILE}' into this folder, then run again.")
-            return
+    # The page only needs code, type and label; it looks hours up from HOURS by
+    # code. Sending the archive's start/end/source as well would put ~10 KB of
+    # build bookkeeping into a public page people load on mobile data.
+    for_page = {k: {"code": v["code"], "type": v["type"], "label": v["label"]}
+                for k, v in shifts.items()}
+    html_path.write_text(generate_html(for_page, generated_at), encoding="utf-8")
 
-    print(f"\n📂 Reading: {xlsx_path.name}")
-    shifts = parse_roster(xlsx_path)
+    ics = generate_ics(shifts)
+    ics_path.write_text(ics, encoding="utf-8")
 
-    # Merge in historical shifts from previous term (do not overwrite new data)
-    for iso, info in OLD_SHIFTS.items():
-        if iso not in shifts:
-            shifts[iso] = info
-    print(f"  ✓ Merged {len(OLD_SHIFTS)} historical shifts")
-
-    # Term 3 — ICU Basic Trainee (newest roster wins on any overlap)
-    pdf_path = script_dir / PDF_FILE
-    if pdf_path.exists():
-        shifts.update(parse_term3_pdf(pdf_path))
-    else:
-        print(f"  ⓘ No Term 3 PDF at {PDF_FILE} — skipping")
-
-    # Term 5 — JMO roster (newest term wins on any overlap)
-    t5 = script_dir / TERM5_FILE
-    if t5.exists():
-        shifts.update(parse_term5_xlsx(t5))
-    else:
-        print(f"  ⓘ No Term 5 roster at {TERM5_FILE} — skipping")
-
-    # Apply holiday override for Jul 13–26
-    d = HOLIDAY_START
-    while d <= HOLIDAY_END:
-        shifts[d.isoformat()] = {"code": "AL", "type": "holiday", "label": "On Holidays! 🍹"}
-        d += timedelta(days=1)
-    print(f"  ✓ Applied holiday override ({HOLIDAY_START} – {HOLIDAY_END})")
-
-    print(f"\n  Shift type breakdown:")
+    events = ics.count("BEGIN:VEVENT")
     from collections import Counter
     counts = Counter(v["type"] for v in shifts.values())
-    for t, n in sorted(counts.items()):
-        print(f"    {t}: {n}")
+    print(f"\n🌐 {OUTPUT_HTML}: {len(shifts)} dated entries")
+    print(f"📅 {OUTPUT_ICS}: {events} events "
+          f"({', '.join(f'{n} {t}' for t, n in sorted(counts.items()))})")
+    print(f"   {generated_at}")
+    return events
 
-    generated_at = datetime.now().strftime("%d %b %Y at %H:%M")
 
-    html_path.parent.mkdir(exist_ok=True)
-    print(f"\n🌐 Writing: {OUTPUT_HTML}")
-    html_path.write_text(generate_html(shifts, generated_at), encoding="utf-8")
-
-    print(f"📅 Writing: {OUTPUT_ICS}")
-    ics_path.write_text(generate_ics(shifts), encoding="utf-8")
-
-    print(f"\n✅ Done! Generated at {generated_at}")
-    print(f"\n   Open {html_path} in a browser to preview.")
+def main():
+    """Running this file directly rebuilds through roster.py, deliberately."""
+    import subprocess, sys
+    print("↪ generate_emily_site.py only renders now — handing over to roster.py\n")
+    sys.exit(subprocess.call(
+        [sys.executable, str(Path(__file__).parent / "roster.py"), "build", "emily"]))
 
 
 if __name__ == "__main__":
