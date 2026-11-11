@@ -11,6 +11,7 @@ HOW TO RUN:
 """
 
 import json
+import re
 import uuid
 from datetime import datetime, timedelta, date
 from pathlib import Path
@@ -31,6 +32,11 @@ SHEET_NAME   = "Term 2"
 PDF_FILE     = "emily/Term 3 2026 BT V6.pdf"
 PDF_PERSON   = "Emily Cooke"
 
+# Term 5 — JMO roster, a WIDE grid: 11 weeks run left to right across ~77 columns,
+# not down the sheet. Newest term wins on any overlap.
+TERM5_FILE   = "emily/JMO Roster Term 5 2026.xlsx"
+TERM5_PERSON = "Emily Cooke"
+
 OUTPUT_HTML  = "emily/index.html"
 OUTPUT_ICS   = "emily/shifts.ics"
 SITE_TITLE   = "Is Emily Working?"
@@ -39,6 +45,22 @@ PERSON_EMOJI = "💉"
 
 # ── Shift hours (start, end) decimal 24hr ─────────────────
 SHIFT_HOURS = {
+    # Term 5 — JMO roster. Hours taken from the sheet's own two key blocks
+    # (cols J/K and cols U/V), never guessed.
+    "A":    (8.0,  16.5),   # Wards 0800-1630 — also what a BLANK weekday means
+    "B":    (10.0, 18.0),   # B shift 1000-1800
+    "B*":   (12.0, 20.0),   # assisting other teams / discharges
+    "W":    (7.75, 15.25),  # Weekend ward round 0745-1515
+    "S":    (8.0,  13.0),   # Surgical ward cover
+    "O":    (10.0, 18.5),   # Ortho
+    "E":    (8.0,  21.0),   # On call 0800-1430 then wards until 2100/2200
+    "LD1":  (8.0,  21.0),   # Rostered duty then rostered O/T until 2100/2200
+    "SC":   (8.0,  16.5),   # Back-up for Evening/LD1/OC plus sick cover
+    "GCTC": (8.0,  16.5),   # General Clinical Training Committee
+    "EMET": (8.0,  16.5),   # Emergency Medicine Education and Training
+    "D":    (8.0,  20.5),   # ICU day
+    "SD":   (7.0,  16.5),   # ICU short day
+    "EV":   (14.5, 22.5),   # 1430-2230
     # Term 2 — resident codes
     "D8":    (7.0,  15.5),   # 07:00 – 15:30
     "D10":   (8.0,  18.5),   # 08:00 – 18:30
@@ -357,6 +379,153 @@ def parse_term3_pdf(pdf_path):
         print(f"  ✓ Term 3: {len(shifts)} days ({min(shifts)} → {max(shifts)})")
     else:
         print(f"  ⚠ No Term 3 entries found for {PDF_PERSON}")
+    return shifts
+
+
+# ============================================================
+# TERM 5 PARSER — wide grid
+# ============================================================
+
+# Codes that mean she is NOT working. RDO appears with varying trailing
+# whitespace in the sheet (requested / approved / rostered are distinguished
+# only by that), so everything is stripped before comparison.
+TERM5_NOT_WORKING = {"RDO", "PH", "OFF", "AL", "N/OT"}
+
+# Codes that are a day off the ward rather than a different shift; they still
+# occupy a normal working day.
+TERM5_LABELS = {
+    "A":    "Wards",
+    "B":    "B Shift",
+    "B*":   "B Shift (cover)",
+    "W":    "Weekend Ward Round",
+    "S":    "Surgical Ward Cover",
+    "O":    "Ortho",
+    "E":    "On Call then Wards",
+    "LD1":  "Long Day + Overtime",
+    "SC":   "Sick Cover / Back-up",
+    "GCTC": "Training Committee",
+    "EMET": "EMET Training",
+    "D":    "ICU Day Shift",
+    "N":    "ICU Night Shift",
+    "SD":   "ICU Short Day",
+    "EV":   "Evening Shift",
+}
+
+
+def parse_term5_xlsx(path):
+    """
+    Term 5 grid runs LEFT TO RIGHT: ~11 weeks across ~77 columns, one block.
+
+    Two things make this sheet hostile to a naive reader, both found 2026-11-11:
+
+    1. The columns are NOT a contiguous run of days. Assuming date = start + (col - 3)
+       drifts by a day before February. The day numbers in the header row are the only
+       truth, so the month is rolled over whenever the number drops.
+    2. A BLANK weekday means a normal working day (0800-1630), not a day off. Codes mark
+       the exceptions. Reading blanks as "not working" gives Emily 4 shifts in 11 weeks
+       instead of about 50.
+    """
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+
+    # Locate the header rows: the term row carries the month names.
+    term_row = None
+    for r in range(1, 60):
+        v = ws.cell(row=r, column=1).value
+        if isinstance(v, str) and v.strip().upper().startswith("TERM"):
+            term_row = r
+            break
+    if term_row is None:
+        print("  ⚠️  Term 5: no 'TERM' header row found — skipping")
+        return {}
+
+    # The day-number row is whichever of the next few rows holds the most integers.
+    day_row, best = None, 0
+    for r in range(term_row, term_row + 8):
+        n = sum(1 for c in range(3, ws.max_column + 1)
+                if isinstance(ws.cell(row=r, column=c).value, int))
+        if n > best:
+            day_row, best = r, n
+    if not day_row or best < 20:
+        print("  ⚠️  Term 5: no day-number row found — skipping")
+        return {}
+
+    # Starting month comes from the first month name on the term row.
+    MONTHS = {m.lower(): i for i, m in enumerate(
+        ["January", "February", "March", "April", "May", "June", "July",
+         "August", "September", "October", "November", "December"], 1)}
+    year, month = 2026, None
+    for c in range(1, ws.max_column + 1):
+        v = ws.cell(row=term_row, column=c).value
+        if isinstance(v, str):
+            key = v.strip().lower()[:3]
+            for name, num in MONTHS.items():
+                if name.startswith(key) and len(key) >= 3:
+                    month = num
+                    break
+        if month:
+            break
+    if not month:
+        print("  ⚠️  Term 5: no month name on the term row — skipping")
+        return {}
+    m = re.search(r"(20\d\d)", str(ws.cell(row=term_row, column=1).value) or "")
+    if m:
+        year = int(m.group(1))
+
+    colmap, prev = {}, None
+    for c in range(3, ws.max_column + 1):
+        v = ws.cell(row=day_row, column=c).value
+        if not isinstance(v, int):
+            continue
+        if prev is not None and v < prev:
+            month += 1
+            if month == 13:
+                month, year = 1, year + 1
+        try:
+            colmap[c] = date(year, month, v)
+        except ValueError:
+            continue
+        prev = v
+    if not colmap:
+        return {}
+
+    # Emily's row
+    person_row = None
+    for r in range(1, ws.max_row + 1):
+        v = ws.cell(row=r, column=2).value
+        if isinstance(v, str) and TERM5_PERSON.lower() in v.lower():
+            person_row = r
+            break
+    if person_row is None:
+        print(f"  ⚠️  Term 5: {TERM5_PERSON} not found — skipping")
+        return {}
+
+    shifts, off = {}, 0
+    for c, d in sorted(colmap.items()):
+        raw = ws.cell(row=person_row, column=c).value
+        code = raw.strip() if isinstance(raw, str) else ""
+
+        if code.upper() in TERM5_NOT_WORKING:
+            off += 1
+            continue
+        if not code:
+            # Blank weekday = a normal rostered day. Blank weekend = not working.
+            if d.weekday() >= 5:
+                continue
+            code = "A"
+        if code not in SHIFT_HOURS:
+            print(f"  ⚠️  Term 5: unknown code {code!r} on {d} — left out of the feed")
+            continue
+
+        start, _ = SHIFT_HOURS[code]
+        kind = "night" if start >= 20 else ("afternoon" if start >= 13 else "day")
+        label = TERM5_LABELS.get(code, code)
+        if d.weekday() >= 5 and "Weekend" not in label:
+            label += " (Weekend)"
+        shifts[d.isoformat()] = {"code": code, "type": kind, "label": label}
+
+    print(f"  ✓ Term 5: {len(shifts)} working days, {off} off "
+          f"({min(colmap.values())} to {max(colmap.values())})")
     return shifts
 
 # ============================================================
@@ -1283,6 +1452,13 @@ def main():
         shifts.update(parse_term3_pdf(pdf_path))
     else:
         print(f"  ⓘ No Term 3 PDF at {PDF_FILE} — skipping")
+
+    # Term 5 — JMO roster (newest term wins on any overlap)
+    t5 = script_dir / TERM5_FILE
+    if t5.exists():
+        shifts.update(parse_term5_xlsx(t5))
+    else:
+        print(f"  ⓘ No Term 5 roster at {TERM5_FILE} — skipping")
 
     # Apply holiday override for Jul 13–26
     d = HOLIDAY_START
