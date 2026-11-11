@@ -373,6 +373,28 @@ def generate_ics(shifts):
         "METHOD:PUBLISH",
         "REFRESH-INTERVAL;VALUE=DURATION:P1D",
         "X-PUBLISHED-TTL:P1D",
+        "X-WR-TIMEZONE:Australia/Sydney",
+        # Australia/Sydney, declared properly. Without this the DTSTART lines below are
+        # FLOATING times: Apple renders them as local (correct), Google imports them as UTC
+        # (11 hours out in AEDT, so a day shift reads 19:00-07:30). Found 2026-11-11 when the
+        # feed was first subscribed in Google Calendar.
+        "BEGIN:VTIMEZONE",
+        "TZID:Australia/Sydney",
+        "BEGIN:DAYLIGHT",
+        "DTSTART:19701004T020000",
+        "TZOFFSETFROM:+1000",
+        "TZOFFSETTO:+1100",
+        "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=1SU",
+        "TZNAME:AEDT",
+        "END:DAYLIGHT",
+        "BEGIN:STANDARD",
+        "DTSTART:19700405T030000",
+        "TZOFFSETFROM:+1100",
+        "TZOFFSETTO:+1000",
+        "RRULE:FREQ=YEARLY;BYMONTH=4;BYDAY=1SU",
+        "TZNAME:AEST",
+        "END:STANDARD",
+        "END:VTIMEZONE",
     ]
     for date_str, info in sorted(shifts.items()):
         d     = date.fromisoformat(date_str)
@@ -388,8 +410,8 @@ def generate_ics(shifts):
             lines += [
                 "BEGIN:VEVENT",
                 f"UID:{uid}@isemilyworking",
-                f"DTSTART:{dtstart.strftime('%Y%m%dT%H%M%S')}",
-                f"DTEND:{dtend.strftime('%Y%m%dT%H%M%S')}",
+                f"DTSTART;TZID=Australia/Sydney:{dtstart.strftime('%Y%m%dT%H%M%S')}",
+                f"DTEND;TZID=Australia/Sydney:{dtend.strftime('%Y%m%dT%H%M%S')}",
                 f"SUMMARY:\U0001f319 {lbl} ({code})",
                 f"DESCRIPTION:{PERSON_NAME} is working: {lbl}",
                 "END:VEVENT",
@@ -405,8 +427,8 @@ def generate_ics(shifts):
             lines += [
                 "BEGIN:VEVENT",
                 f"UID:{uid}@isemilyworking",
-                f"DTSTART:{dtstart.strftime('%Y%m%dT%H%M%S')}",
-                f"DTEND:{dtend.strftime('%Y%m%dT%H%M%S')}",
+                f"DTSTART;TZID=Australia/Sydney:{dtstart.strftime('%Y%m%dT%H%M%S')}",
+                f"DTEND;TZID=Australia/Sydney:{dtend.strftime('%Y%m%dT%H%M%S')}",
                 f"SUMMARY:{icon} {lbl} ({code})",
                 f"DESCRIPTION:{PERSON_NAME} is working: {lbl}",
                 "END:VEVENT",
