@@ -146,6 +146,11 @@ def cmd_add(person, filepath, sheet=None, note=None, allow_shrink=False):
         print(f"📥 Copied in: {dest.relative_to(ROOT)}")
 
     rel = str(dest.relative_to(ROOT))
+    # Charlie's roster grid is always the sheet called Registrar, in a workbook
+    # of twenty-odd. The hint saves typing --sheet and saves guessing wrong.
+    sheet = sheet or m.get("sheet_hint")
+    if sheet:
+        print(f"   sheet: {sheet} (from sheet_hint in {m['_path'].name})")
     entry = {"file": rel, "sheet": sheet,
              "note": note or dest.stem,
              "added": datetime.now().strftime("%Y-%m-%d")}

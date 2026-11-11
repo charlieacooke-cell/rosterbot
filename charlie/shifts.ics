@@ -921,6 +921,20 @@ SUMMARY:☀️ South POD Day (SD)
 DESCRIPTION:Charlie is working: South POD Day
 END:VEVENT
 BEGIN:VEVENT
+UID:e4a3d333-b7f3-5e29-aad4-29726f650e19@ischarlieworking
+DTSTART;TZID=Australia/Sydney:20261028T073000
+DTEND;TZID=Australia/Sydney:20261028T173000
+SUMMARY:☀️ Anaesthetics (Anaes/SR)
+DESCRIPTION:Charlie is working: Anaesthetics
+END:VEVENT
+BEGIN:VEVENT
+UID:2e8c42d8-bc6a-58a8-8fc3-02826df86bb1@ischarlieworking
+DTSTART;TZID=Australia/Sydney:20261029T073000
+DTEND;TZID=Australia/Sydney:20261029T173000
+SUMMARY:☀️ Anaesthetics (Anaes/SR)
+DESCRIPTION:Charlie is working: Anaesthetics
+END:VEVENT
+BEGIN:VEVENT
 UID:6646bd77-b1c3-5871-84e7-7fc9ba2fe8b2@ischarlieworking
 DTSTART;TZID=Australia/Sydney:20261030T080000
 DTEND;TZID=Australia/Sydney:20261030T203000

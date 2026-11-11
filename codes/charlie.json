@@ -140,5 +140,8 @@
  "_comment": "Charlie's shift codes. One place for hours, type and label: the website, the calendar feed and the parser all read this file. Add a code here when a new one turns up on the roster — no code change needed. Hours are 24hr local; a night shift's end is the next morning, so end < start.",
  "person": "Charlie",
  "blank_weekday": null,
- "blank_weekend": null
+ "blank_weekend": null,
+ "aliases": {
+  "Anaes": "Anaes/SR"
+ }
 }

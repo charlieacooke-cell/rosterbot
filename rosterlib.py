@@ -136,7 +136,14 @@ def pick_sheet(wb, sheet=None):
                 return wb[name]
         raise SystemExit(f"Sheet {sheet!r} not in workbook: {wb.sheetnames}")
 
-    best, best_n = None, -1
+    # Guessing is only safe in a small workbook. The November roster has 21
+    # sheets; "most date cells" lands on 'Pall Care + APS Allocation', whose
+    # cells hold colleagues' names, and "most cells for this person" lands on
+    # 'Weekly Master Roster', which is the same roster transposed and runs five
+    # weeks past the end of the real one. Neither is 'Registrar'. No scoring
+    # rule reliably tells a roster grid from its neighbours, so above a handful
+    # of sheets this stops and asks instead of picking one and looking certain.
+    dated = []
     for name in wb.sheetnames:
         ws = wb[name]
         n = 0
@@ -145,9 +152,19 @@ def pick_sheet(wb, sheet=None):
             for c in row:
                 if isinstance(c.value, (datetime, date)):
                     n += 1
-        if n > best_n:
-            best, best_n = ws, n
-    return best
+        if n:
+            dated.append((ws, n))
+
+    if not dated:
+        return wb[wb.sheetnames[0]]
+    if len(dated) > 3:
+        names = ", ".join(ws.title for ws, _ in dated[:8])
+        raise SystemExit(
+            f"\n❌ This workbook has {len(wb.sheetnames)} sheets and "
+            f"{len(dated)} of them hold dates, so the roster grid cannot be "
+            f"picked safely.\n   Name it: --sheet \"Registrar\", or set "
+            f'"sheet_hint" in sources.json.\n   Sheets with dates: {names}')
+    return max(dated, key=lambda d: d[1])[0]
 
 
 # ============================================================

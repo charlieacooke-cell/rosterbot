@@ -1,5 +1,5 @@
 {
- "_comment": "Roster spreadsheets for Charlie, OLDEST FIRST. A later source wins only across the span of dates it actually covers, so adding next term cannot wipe this one. The files themselves are gitignored (they hold colleagues' shifts); charlie/history.json is the committed record of Charlie's own shifts, so a build still works when a file goes missing.",
+ "_comment": "Roster spreadsheets for Charlie, OLDEST FIRST. A later source wins only across the span of dates it actually covers, so adding next term cannot wipe this one. The files themselves are gitignored (they hold colleagues' shifts); charlie/history.json is the committed record of Charlie's own shifts, so a build still works when a file goes missing. sheet_hint is the sheet to read when a new file is added without --sheet: these workbooks carry twenty-odd sheets and only 'Registrar' is the roster grid.",
  "person": "Charlie",
  "site": "charlie",
  "codes": "codes/charlie.json",
@@ -14,10 +14,12 @@
    "why_this_copy": "Three other copies of the S1 roster are on disk and the root CSV (19 Apr) is the one the generator used to read. This download (29 Jun) is the newest fresh pull of the live S1 sheet and the only one that matches what has been published since: it has SN for 29 Jun-5 Jul where the others have SD, which reads as a swap made after April. The 'Registrar S1' tab inside the S2 workbook is newer as a file but is a carried-over historical tab, not a fresh pull, so it is not used."
   },
   {
-   "file": "charlie/2026 Second Half of year DRAFT.xlsx",
-   "sheet": "Registrar S2",
-   "note": "2026 S2 (Aug-Dec)",
-   "added": "2026-07-11"
+   "file": "charlie/6c9fc6eb-2026_ICU_Roster.xlsx",
+   "sheet": "Registrar",
+   "note": "2026 S2 updated (Nov)",
+   "added": "2026-11-12",
+   "why_this_copy": "Replaces '2026 Second Half of year DRAFT.xlsx'. Same span (9 Aug - 14 Dec) from a fresh download. 21 sheets in this workbook, so the sheet is named explicitly: left to guess, the reader picks 'Pall Care + APS Allocation', which has more date cells and holds names rather than shift codes."
   }
- ]
+ ],
+ "sheet_hint": "Registrar"
 }
