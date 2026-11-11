@@ -57,6 +57,19 @@ def t_merge_only_touches_its_own_span():
     assert "2026-09-01" in merged, "September must survive a March-only sheet"
 
 
+def t_resupplying_a_source_clears_what_it_used_to_say():
+    """Term 5's last cell was misread as 1 Feb; when it was corrected to 31 Jan
+    the 1 Feb event stayed, because it sat past everything the fixed sheet
+    covers. A source now clears its own previous entries."""
+    archive = {"2027-02-01": {"code": "A", "source": "Term 5"},
+               "2026-01-01": {"code": "A", "source": "Term 1"}}
+    new = {"2027-01-31": {"code": "A", "source": "Term 5"}}
+    merged, _, _ = R.merge_source(archive, new, source="Term 5")
+    assert "2027-02-01" not in merged, "a corrected date must not linger"
+    assert "2027-01-31" in merged
+    assert "2026-01-01" in merged, "another source's dates must survive"
+
+
 def t_guard_refuses_a_shrinking_build():
     before = {"2026-03-01": {}, "2026-09-01": {}}
     after  = {"2026-03-01": {}}

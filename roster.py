@@ -83,7 +83,12 @@ def gather(person, verbose=True):
         resolved, unk = R.resolve(raw, table, fallback=before, source=note)
         for code, dates in unk.items():
             unknown.setdefault(code, []).extend(dates)
-        working, _, _ = R.merge_source(working, resolved, note if verbose else "")
+        # The span is the whole range the sheet covers, not just the days that
+        # turned into shifts — blank weekends at either end still belong to it.
+        span = (min(raw), max(raw)) if raw else None
+        working, _, _ = R.merge_source(working, resolved,
+                                       note if verbose else "",
+                                       source=note, span=span)
 
     # Overrides go on last, above every source.
     working = R.apply_overrides(working, m.get("overrides"), table)

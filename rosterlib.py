@@ -474,19 +474,30 @@ def save_archive(path, shifts, sources):
     }, indent=1) + "\n", encoding="utf-8")
 
 
-def merge_source(archive, new, label=""):
+def merge_source(archive, new, label="", source=None, span=None):
     """
-    Overlay `new` onto `archive`, but only across the span of dates `new`
-    covers. Dates outside that span are left alone, so a one-term sheet can
-    never wipe another term.
+    Overlay `new` onto `archive` across the span of dates the source covers.
+    Dates outside that span are left alone, so a one-term sheet can never wipe
+    another term.
+
+    Entries the SAME source put there last time are also cleared first, even
+    when they fall outside the new span. Otherwise a date the sheet has since
+    corrected lingers for ever: Term 5's last cell was misread as 1 February,
+    and when the date was fixed to 31 January the 1 February event stayed in
+    the feed, past the end of everything the corrected sheet covers.
     """
     if not new:
         return archive, 0, 0
-    lo, hi = min(new), max(new)
+    lo, hi = span if span else (min(new), max(new))
+    lo, hi = min(lo, min(new)), max(hi, max(new))
     before = dict(archive)
-    merged = {k: v for k, v in archive.items() if not (lo <= k <= hi)}
+    merged = {k: v for k, v in archive.items()
+              if not (lo <= k <= hi)
+              and not (source and v.get("source") == source)}
     merged.update(new)
     for k, v in before.items():          # keep anything outside the span
+        if source and v.get("source") == source and k not in new:
+            continue                     # …except what this source has dropped
         merged.setdefault(k, v)
     added   = sum(1 for k in merged if k not in before)
     changed = sum(1 for k in merged if k in before and merged[k] != before[k])
