@@ -117,6 +117,37 @@ def t_blank_weekday_is_a_working_day_weekend_is_not():
     assert "2026-11-21" not in got, "a blank weekend is not a shift"
 
 
+def t_blank_public_holiday_is_not_a_working_day():
+    """Emily's JMO roster: blank weekday = ward day, but a blank on a public
+    holiday is a day off. Christmas 2026 is a Friday; Boxing Day is a Saturday,
+    so Monday 28 Dec is the additional day."""
+    got, _ = R.resolve({"2026-12-25": "", "2026-12-28": "", "2026-12-29": "",
+                        "2027-01-26": "", "2026-06-08": ""}, TABLE)
+    for d in ("2026-12-25", "2026-12-28", "2027-01-26", "2026-06-08"):
+        assert d not in got or got[d]["type"] == "off", f"{d}: {got.get(d)}"
+    assert got["2026-12-29"]["code"] == "A", "an ordinary weekday is still a ward day"
+
+
+def t_typed_shift_on_a_public_holiday_still_counts():
+    got, _ = R.resolve({"2026-12-25": "N"}, TABLE)
+    assert got["2026-12-25"]["code"] == "N"
+
+
+def t_extra_holidays_such_as_picnic_day():
+    table = dict(TABLE, extra_holidays={"2026-11-18": "Picnic Day"})
+    got, _ = R.resolve({"2026-11-18": ""}, table)
+    assert "2026-11-18" not in got, got
+
+
+def t_nsw_holidays_known_dates():
+    h = R.nsw_public_holidays(2026)
+    for d in ("2026-01-01", "2026-01-26", "2026-04-03", "2026-04-06",
+              "2026-06-08", "2026-10-05", "2026-12-25", "2026-12-28"):
+        assert date.fromisoformat(d) in h, d
+    assert date(2026, 4, 27) not in h, "Anzac Day has no substitute in NSW"
+    assert date(2027, 3, 26) in R.nsw_public_holidays(2027), "Good Friday 2027"
+
+
 def t_alias_and_sloppy_spacing_resolve():
     got, unk = R.resolve({"2026-08-01": "D10 WE", "2026-08-02": " d10we "}, TABLE)
     assert not unk, f"should not be unknown: {unk}"
@@ -157,6 +188,56 @@ def t_archive_round_trip():
         R.save_archive(p, {"2026-08-06": {"code": "A"}}, ["a source"])
         assert R.load_archive(p) == {"2026-08-06": {"code": "A"}}
         assert "sources" in json.loads(p.read_text())
+
+
+def _day_number_grid(rows_of_people):
+    """A day-number sheet for December 2026: month name, weekday letters,
+    day numbers, then one row per (team, name, {day: code})."""
+    letters = ["M", "Tu", "W", "Th", "F", "Sa", "Su"]
+    days = list(range(1, 19))
+    head = ["", "", "December 2026"] + [""] * (len(days) - 1)
+    wd = ["", ""] + [letters[date(2026, 12, d).weekday()] for d in days]
+    nums = ["", ""] + days
+    out = [head, wd, nums]
+    for team, name, codes in rows_of_people:
+        out.append([team, name] + [codes.get(d, "") for d in days])
+    return out
+
+
+def t_a_colleague_with_the_same_first_name_is_not_her():
+    """The Term 5 sheet has Emily Greenberg nine rows above Emily Cooke."""
+    assert R.name_matches("Emily Cooke", "Emily Cooke")
+    assert R.name_matches("Emily", "Emily Cooke"), "first names only is a layout"
+    assert R.name_matches("Emily C", "Emily Cooke")
+    assert R.name_matches("Emily Cooke / Charlie Nasra", "Emily Cooke")
+    assert not R.name_matches("Emily Greenberg", "Emily Cooke")
+    assert not R.name_matches("Charlie Nasra / Anna Lubomski Reliever for "
+                             "Emily Cooke", "Emily Cooke")
+
+
+def t_the_other_emilys_row_is_not_read():
+    """The 2026-11-13 failure: her whole term came off row 39 instead of 48,
+    so Christmas read as a surgical shift when her own row says PH."""
+    rows = _day_number_grid([
+        ("Surgery C", "Emily Greenberg", {3: "S", 4: "S"}),
+        ("Community Psychiatry", "Emily Cooke", {3: "PH"}),
+    ])
+    got = R._read_day_numbers(rows, "Emily Cooke", 2026)
+    assert got["2026-12-03"] == "PH", got["2026-12-03"]
+    assert got["2026-12-04"] == "", "that S is Greenberg's"
+
+
+def t_two_names_that_fit_equally_well_stop_the_build():
+    rows = _day_number_grid([
+        ("Surgery C", "Emily", {3: "S"}),
+        ("Community Psychiatry", "Emily C", {3: "PH"}),
+    ])
+    try:
+        R._read_day_numbers(rows, "Emily Cooke", 2026)
+    except SystemExit as e:
+        assert "different names" in str(e), e
+    else:
+        assert False, "an ambiguous name must not be guessed at"
 
 
 # ── the real sheets, if they are on this machine ─────────────

@@ -389,5 +389,8 @@
   "E10 (1100 - 2100)": "E10S",
   "LD1 ": "LD1"
  },
- "_type_note": "Type drives the website's wording and the calendar icon. Codes carrying hours get their type from the start time (>=20:00 night, >=13:00 afternoon, else day) unless they are leave. 14 Term 5 codes were typed 'off' when this file was first extracted, because the old Term 5 parser derived the type from the hours and bypassed the classifier these values came from."
+ "_type_note": "Type drives the website's wording and the calendar icon. Codes carrying hours get their type from the start time (>=20:00 night, >=13:00 afternoon, else day) unless they are leave. 14 Term 5 codes were typed 'off' when this file was first extracted, because the old Term 5 parser derived the type from the hours and bypassed the classifier these values came from.",
+ "blank_holiday": "PH",
+ "extra_holidays": {},
+ "_holiday_note": "A blank cell is a ward day only on an ordinary weekday. On weekends, NSW public holidays (computed in rosterlib.nsw_public_holidays) and any date in extra_holidays, a blank means off; blank_holiday is the code shown instead. Add hospital picnic day etc. as {\"YYYY-MM-DD\": \"Picnic Day\"}."
 }

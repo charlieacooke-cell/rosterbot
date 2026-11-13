@@ -89,7 +89,21 @@ sheet's last cell reads `1` under "Su" after Sat 30 January, which reads as
 1 February, a Monday. The published feed had it as 1 February. It is 31 January,
 and the weekday row is what proves it.
 
-**The general rule behind all three: verify the artefact, not the name.** Count
+**4. The other Emily (2026-11-13).** Term 5 was published off the wrong row.
+`name_matches` treated a first name as enough — written for sheets that list
+only first names — so "Emily Greenberg" at row 39 matched "Emily Cooke" at
+row 48, and eleven weeks of a colleague's roster went onto Emily's site. It
+showed as a surgical shift on Christmas Day; her own row says `PH`.
+
+→ A first-name match must now carry **no word that is not part of the person's
+own name**: `Emily` and `Emily C` are her, `Emily Greenberg` is not. Readers
+that pick exactly one row or column take the **best** match rather than the
+first, and two names that fit equally well stop the build. Every build now
+prints the row or column it settled on and the name in that cell —
+`row 48, the sheet's 'Emily Cooke'` — because that one line would have shown
+this on the day it was published.
+
+**The general rule behind all four: verify the artefact, not the name.** Count
 the events, diff the feed, check the dates against a second property of the same
 sheet. A parser that returns 81 shifts looks exactly like a parser that returns
 159, right up until someone misses work.
@@ -114,6 +128,12 @@ the calendar feed and the parser all read it.
 - **`blank_weekday`** is the quiet one. On Emily's JMO roster a blank weekday
   means a normal ward day and the codes mark the *exceptions*; reading blanks as
   "not working" gives her four shifts in eleven weeks. On Charlie's it is `null`.
+- **`blank_holiday`** is the other half of that rule: a blank means a ward day
+  only on an *ordinary* weekday. On a weekend, an NSW public holiday (worked out
+  from the date, substitute days included — Boxing Day 2026 is a Saturday, so
+  Mon 28 Dec is the day off) or a date in **`extra_holidays`** (hospital picnic
+  day and the like, `{"2027-05-10": "Picnic Day"}`), a blank means off. A shift
+  on one of those days is always typed in.
 - **`aliases`** absorb hand-typed variants (`"D10 WE" → "D10WE"`,
   `"E10 (1100 - 2100)" → "E10S"`) without touching any code.
 - An **unknown code is never dropped.** It is published as an ordinary day with

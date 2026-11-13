@@ -89,17 +89,77 @@ def text(v):
     return str(v).strip() if v is not None else ""
 
 
-def name_matches(cell_text, person):
-    """Does this cell name the person? First name alone is enough."""
+def _name_words(s):
+    """The words of a name, lowercase, with punctuation and slashes gone."""
+    return [w for w in re.split(r"[^a-z\']+", s.lower()) if w]
+
+
+def match_rank(cell_text, person):
+    """
+    How well does this cell name the person? 0 is best, None is not at all.
+
+      0  exactly their name
+      1  every part of their name somewhere in the cell — "Dr Emily Cooke",
+         "Emily Cooke / Charlie Nasra", a shared or job-shared row
+      2  their first name and nothing that contradicts it — "Emily", "Emily C"
+
+    Rank 2 is there because some sheets write first names only, and it is
+    where this went wrong on 2026-11-13. It used to accept any cell with the
+    first name in it, so "Emily Greenberg" at row 39 of the Term 5 sheet
+    matched "Emily Cooke" at row 48, and the published term was Greenberg's
+    row. A first-name match must now carry no word that is not part of the
+    person's own name.
+    """
     if not cell_text:
-        return False
-    t = cell_text.lower()
+        return None
+    t = cell_text.strip().lower()
     if "reliever for" in t:      # a cover line, not the person's own row
-        return False
-    parts = [p for p in person.lower().split() if p]
-    return t == person.lower() or all(p in t for p in parts) or (
-        len(parts) > 1 and parts[0] in t.split()
-    )
+        return None
+    if t == person.strip().lower():
+        return 0
+    parts = _name_words(person)
+    if not parts:
+        return None
+    if all(p in t for p in parts):
+        return 1
+    words = _name_words(t)
+    if len(parts) > 1 and parts[0] in words and all(
+            any(w == p or (len(w) <= 2 and p.startswith(w)) for p in parts)
+            for w in words):
+        return 2                 # "Emily", "Emily C" — never "Emily Greenberg"
+    return None
+
+
+def name_matches(cell_text, person):
+    """Does this cell name the person at all?"""
+    return match_rank(cell_text, person) is not None
+
+
+def pick_named(candidates, person, what):
+    """
+    Choose one of `candidates` — [(index, cell_text), ...] — as the person's
+    own row or column, and return (index, the cell's text).
+
+    A reader that picks exactly one row must not take the first cell that
+    half-fits: the better match wins, and two different names tied at the same
+    quality stop the build rather than get guessed at.
+    """
+    ranked = sorted((r, i, t) for r, i, t in
+                    ((match_rank(t, person), i, t) for i, t in candidates)
+                    if r is not None)
+    if not ranked:
+        return None, ""
+    best = ranked[0][0]
+    hits = [h for h in ranked if h[0] == best]
+    names = sorted({" ".join(_name_words(t)) for _, _, t in hits})
+    if len(names) > 1:
+        shown = "\n   ".join(f"{t!r} ({what} {i + 1})" for _, i, t in hits)
+        raise SystemExit(
+            f"\n\u274c {person!r} matches {len(names)} different names on this "
+            f"sheet, equally well:\n   {shown}\n"
+            f'   Spell the name as the sheet spells it, in "person" in '
+            f"sources.json.")
+    return hits[0][1], hits[0][2]
 
 
 # ============================================================
@@ -195,40 +255,41 @@ def read_grid(path, person, sheet=None, year_hint=None, verbose=True):
     best_row_n = max(per_row.values()) if per_row else 0
 
     if best_col_n >= 10 and best_col_n >= best_row_n:
-        shifts = _read_vertical(rows, person, year_hint)
-        layout = "vertical (dates down a column)"
+        reader, layout = _read_vertical, "vertical (dates down a column)"
     elif best_row_n >= 3:
-        shifts = _read_horizontal(rows, person, year_hint)
-        layout = "horizontal (dates across a row)"
+        reader, layout = _read_horizontal, "horizontal (dates across a row)"
     else:
-        shifts = _read_day_numbers(rows, person, year_hint)
-        layout = "day numbers (integers with a month name)"
+        reader, layout = _read_day_numbers, "day numbers (integers with a month name)"
+
+    # The header prints before the read, so that the row or column the reader
+    # settles on — the thing that was wrong on 2026-11-13 — is on screen
+    # underneath the file it came from.
+    if verbose:
+        print(f"  ✓ {Path(path).name} [{sheet_name}] {layout}")
+    shifts = reader(rows, person, year_hint, verbose)
 
     if verbose:
         if shifts:
             lo, hi = min(shifts), max(shifts)
-            print(f"  ✓ {Path(path).name} [{sheet_name}] {layout}")
             print(f"    {len(shifts)} dated cells for {person}: {lo} to {hi}")
         else:
-            print(f"  ⚠️  {Path(path).name} [{sheet_name}] {layout}: nothing for {person}")
+            print(f"    ⚠️  nothing for {person}")
     return shifts
 
 
 def _find_person_column(rows, person, first_date_row):
     """A person's column, from any header row above the first date row."""
-    for ri in range(0, max(first_date_row, 1)):
-        for ci, v in enumerate(rows[ri]):
-            if name_matches(text(v), person):
-                return ci
-    # Some sheets repeat the header mid-grid; widen the search.
-    for ri, row in enumerate(rows):
-        for ci, v in enumerate(row):
-            if name_matches(text(v), person):
-                return ci
-    return None
+    # The header band first; some sheets repeat the header mid-grid, so the
+    # whole sheet is the fallback.
+    for band in (rows[:max(first_date_row, 1)], rows):
+        cands = [(ci, text(v)) for row in band for ci, v in enumerate(row)]
+        col, label = pick_named(cands, person, "column")
+        if col is not None:
+            return col, label
+    return None, ""
 
 
-def _read_vertical(rows, person, year_hint):
+def _read_vertical(rows, person, year_hint, verbose=False):
     """Dates down one column, one column per person."""
     counts = {}
     for row in rows:
@@ -239,10 +300,12 @@ def _read_vertical(rows, person, year_hint):
     first_date_row = next(ri for ri, row in enumerate(rows)
                           if len(row) > date_col and as_date(row[date_col], year_hint))
 
-    col = _find_person_column(rows, person, first_date_row)
+    col, label = _find_person_column(rows, person, first_date_row)
     if col is None:
         header = [text(v) for v in rows[max(first_date_row - 1, 0)] if text(v)]
         raise SystemExit(f"{person!r} not found. Names on this sheet: {header}")
+    if verbose:
+        print(f"    column {col + 1}, the sheet's {label!r}")
 
     # A weekday-name column ("Monday", "Tuesday", ...) next to the dates is a
     # free check on whether we are reading the right column of the right rows.
@@ -271,14 +334,19 @@ def _read_vertical(rows, person, year_hint):
     return out
 
 
-def _read_horizontal(rows, person, year_hint):
+def _read_horizontal(rows, person, year_hint, verbose=False):
     """
     Dates across a row, people down the first columns. Handles sheets built
     from repeated two-week blocks: each person row takes the dates from the
     nearest date row above it.
+
+    Here the person has one row per block, and on Emily's Term 2 sheet some of
+    those rows are shared ("Emily Cooke / Charlie Nasra"), so every row that
+    names her is read — unlike the single-row layouts below.
     """
     out = {}
     colmap = {}
+    seen = []
     for row in rows:
         dates_here = {ci: as_date(v, year_hint) for ci, v in enumerate(row)
                       if as_date(v, year_hint)}
@@ -288,14 +356,19 @@ def _read_horizontal(rows, person, year_hint):
         if not colmap:
             continue
         # Person rows name themselves in one of the first few columns.
-        if not any(name_matches(text(v), person) for v in row[:3]):
+        named = [text(v) for v in row[:3] if name_matches(text(v), person)]
+        if not named:
             continue
+        seen.extend(named)
         for ci, d in colmap.items():
             if ci >= len(row):
                 continue
             code = text(row[ci])
             if code and code not in ("0", "1", "None"):
                 out[d.isoformat()] = code
+    if verbose and seen:
+        names = ", ".join(sorted(set(seen)))
+        print(f"    {len(seen)} row(s) named: {names}")
     return out
 
 
@@ -353,7 +426,7 @@ def _find_weekday_row(rows, day_row):
     return {}
 
 
-def _read_day_numbers(rows, person, year_hint):
+def _read_day_numbers(rows, person, year_hint, verbose=False):
     """
     Dates are bare day numbers across a row, with a month name somewhere in the
     header band. The columns are not a contiguous run of days, so the month is
@@ -450,13 +523,12 @@ def _read_day_numbers(rows, person, year_hint):
     verify_weekdays([(d, weekdays[ci]) for ci, d in colmap.items()
                      if ci in weekdays], "day-number sheet")
 
-    person_row = None
-    for ri, row in enumerate(rows):
-        if any(name_matches(text(v), person) for v in row[:3]):
-            person_row = ri
-            break
+    cands = [(ri, text(v)) for ri, row in enumerate(rows) for v in row[:3]]
+    person_row, label = pick_named(cands, person, "row")
     if person_row is None:
         raise SystemExit(f"{person!r} not found in the first three columns of this sheet")
+    if verbose:
+        print(f"    row {person_row + 1}, the sheet's {label!r}")
 
     out = {}
     for ci, d in colmap.items():
@@ -558,6 +630,80 @@ def to_decimal(hhmm):
     return int(h) + int(m) / 60.0
 
 
+
+# ============================================================
+# NON-WORKING DAYS — when a blank cell means "off"
+# ============================================================
+
+def _easter(year):
+    """Gregorian Easter Sunday (anonymous Gregorian algorithm)."""
+    a, b, c = year % 19, year // 100, year % 100
+    d, e = b // 4, b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return date(year, month, day)
+
+
+def _nth_weekday(year, month, weekday, n):
+    d = date(year, month, 1)
+    d += timedelta(days=(weekday - d.weekday()) % 7)
+    return d + timedelta(weeks=n - 1)
+
+
+def nsw_public_holidays(year):
+    """
+    NSW public holidays (Public Holidays Act 2010), including the additional
+    weekday given when New Year's Day, Australia Day, Christmas or Boxing Day
+    falls on a weekend. Anzac Day gets no substitute in NSW. The August Bank
+    Holiday is for banks only, so it is not here.
+    """
+    out = {}
+    def add(d, name):
+        out[d] = name
+    def add_with_substitute(d, name):
+        add(d, name)
+        if d.weekday() >= 5:
+            sub = d + timedelta(days=1)
+            while sub.weekday() >= 5 or sub in out:
+                sub += timedelta(days=1)
+            add(sub, name + " (additional day)")
+
+    add_with_substitute(date(year, 1, 1), "New Year's Day")
+    add_with_substitute(date(year, 1, 26), "Australia Day")
+    e = _easter(year)
+    add(e - timedelta(days=2), "Good Friday")
+    add(e - timedelta(days=1), "Easter Saturday")
+    add(e, "Easter Sunday")
+    add(e + timedelta(days=1), "Easter Monday")
+    add(date(year, 4, 25), "Anzac Day")
+    add(_nth_weekday(year, 6, 0, 2), "King's Birthday")
+    add(_nth_weekday(year, 10, 0, 1), "Labour Day")
+    # Christmas first, so Boxing Day's substitute steps past Christmas's.
+    add_with_substitute(date(year, 12, 25), "Christmas Day")
+    add_with_substitute(date(year, 12, 26), "Boxing Day")
+    return out
+
+
+def non_working_day(d, table):
+    """
+    Name of the holiday if `d` is one on which a blank cell means "not
+    working": an NSW public holiday, or a date listed in the code table's
+    `extra_holidays` (hospital picnic day and the like). None otherwise.
+    """
+    extra = table.get("extra_holidays") or {}
+    if isinstance(extra, list):
+        extra = {x: "Holiday" for x in extra}
+    if d.isoformat() in extra:
+        return extra[d.isoformat()] or "Holiday"
+    return nsw_public_holidays(d.year).get(d)
+
+
 def resolve(raw, table, fallback=None, source=""):
     """
     Turn {iso: raw-code} into {iso: {code, type, label, start, end}} using the
@@ -578,6 +724,21 @@ def resolve(raw, table, fallback=None, source=""):
         code = (rawcode or "").strip()
 
         if not code:
+            # A blank is a normal day only on an ordinary weekday. On a
+            # weekend, a public holiday or a listed hospital holiday (picnic
+            # day) a blank means off, and a shift is always typed in.
+            holiday = non_working_day(d, table)
+            if holiday and table.get("blank_weekday"):
+                code = table.get("blank_holiday") or ""
+                if not code:
+                    continue
+                entry = codes.get(code, {"type": "off", "label": holiday})
+                item = {"code": code, "type": entry.get("type", "off"),
+                        "label": holiday}
+                if source:
+                    item["source"] = source
+                out[iso] = item
+                continue
             key = "blank_weekend" if d.weekday() >= 5 else "blank_weekday"
             code = table.get(key) or ""
             if not code:

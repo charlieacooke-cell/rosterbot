@@ -728,8 +728,8 @@ BEGIN:VEVENT
 UID:2915f3c8-b410-5024-bf9c-5c1b7664f0bd@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261117T080000
 DTEND;TZID=Australia/Sydney:20261117T163000
-SUMMARY:☀️ Wards + On Call (OC)
-DESCRIPTION:Emily is working: Wards + On Call
+SUMMARY:☀️ Wards (A)
+DESCRIPTION:Emily is working: Wards
 END:VEVENT
 BEGIN:VEVENT
 UID:999209ab-49a0-5606-8446-c02d06cd0203@isemilyworking
@@ -756,15 +756,15 @@ BEGIN:VEVENT
 UID:9d32fd1c-0273-55ca-930b-1c81f9a0e8cb@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261121T100000
 DTEND;TZID=Australia/Sydney:20261121T180000
-SUMMARY:☀️ B Shift (Weekend) (B)
-DESCRIPTION:Emily is working: B Shift (Weekend)
+SUMMARY:☀️ B Shift (B)
+DESCRIPTION:Emily is working: B Shift
 END:VEVENT
 BEGIN:VEVENT
 UID:c25ca8f3-26ed-5382-ac24-c154ce554137@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261122T100000
 DTEND;TZID=Australia/Sydney:20261122T180000
-SUMMARY:☀️ B Shift (Weekend) (B)
-DESCRIPTION:Emily is working: B Shift (Weekend)
+SUMMARY:☀️ B Shift (B)
+DESCRIPTION:Emily is working: B Shift
 END:VEVENT
 BEGIN:VEVENT
 UID:dab80ac3-94f9-5038-bb27-b0d9636d7e04@isemilyworking
@@ -819,8 +819,8 @@ BEGIN:VEVENT
 UID:899c524f-c7e6-593f-9cc2-c6f6bfad15a0@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261202T080000
 DTEND;TZID=Australia/Sydney:20261202T163000
-SUMMARY:☀️ Sick Cover / Back-up (SC)
-DESCRIPTION:Emily is working: Sick Cover / Back-up
+SUMMARY:☀️ Wards (A)
+DESCRIPTION:Emily is working: Wards
 END:VEVENT
 BEGIN:VEVENT
 UID:13af314c-0a35-5dde-8449-791d928d377f@isemilyworking
@@ -839,9 +839,9 @@ END:VEVENT
 BEGIN:VEVENT
 UID:d9c41d56-29bc-5379-b33b-1d6b1f8e661b@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261207T080000
-DTEND;TZID=Australia/Sydney:20261207T210000
-SUMMARY:☀️ Long Day + Overtime (LD1)
-DESCRIPTION:Emily is working: Long Day + Overtime
+DTEND;TZID=Australia/Sydney:20261207T163000
+SUMMARY:☀️ Sick Cover / Back-up (SC)
+DESCRIPTION:Emily is working: Sick Cover / Back-up
 END:VEVENT
 BEGIN:VEVENT
 UID:51db850b-5a70-581c-a62f-25fa15d1e744@isemilyworking
@@ -903,13 +903,6 @@ BEGIN:VEVENT
 UID:7c791b76-5528-55a4-9198-8645bce8cfc4@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261218T080000
 DTEND;TZID=Australia/Sydney:20261218T163000
-SUMMARY:☀️ Sick Cover / Back-up (SC)
-DESCRIPTION:Emily is working: Sick Cover / Back-up
-END:VEVENT
-BEGIN:VEVENT
-UID:2407a4f5-690d-5b92-abe0-9a179e5a5731@isemilyworking
-DTSTART;TZID=Australia/Sydney:20261221T080000
-DTEND;TZID=Australia/Sydney:20261221T163000
 SUMMARY:☀️ Wards (A)
 DESCRIPTION:Emily is working: Wards
 END:VEVENT
@@ -935,20 +928,6 @@ SUMMARY:☀️ Wards (A)
 DESCRIPTION:Emily is working: Wards
 END:VEVENT
 BEGIN:VEVENT
-UID:7e1102de-44ef-5d5c-8522-532fa3054600@isemilyworking
-DTSTART;TZID=Australia/Sydney:20261225T080000
-DTEND;TZID=Australia/Sydney:20261225T130000
-SUMMARY:☀️ Surgical Ward Cover (S)
-DESCRIPTION:Emily is working: Surgical Ward Cover
-END:VEVENT
-BEGIN:VEVENT
-UID:49a12079-e7e4-5719-a183-40f6ba3db4de@isemilyworking
-DTSTART;TZID=Australia/Sydney:20261226T080000
-DTEND;TZID=Australia/Sydney:20261226T130000
-SUMMARY:☀️ Surgical Ward Cover (S)
-DESCRIPTION:Emily is working: Surgical Ward Cover
-END:VEVENT
-BEGIN:VEVENT
 UID:6c526082-f533-5bb8-afc7-fdead5a05344@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261229T080000
 DTEND;TZID=Australia/Sydney:20261229T163000
@@ -959,20 +938,6 @@ BEGIN:VEVENT
 UID:e85adb69-bb26-5077-a6e5-5beec82f4e66@isemilyworking
 DTSTART;TZID=Australia/Sydney:20261230T080000
 DTEND;TZID=Australia/Sydney:20261230T163000
-SUMMARY:☀️ Wards (A)
-DESCRIPTION:Emily is working: Wards
-END:VEVENT
-BEGIN:VEVENT
-UID:2a858fcc-65b5-53d7-ba73-182724a266c9@isemilyworking
-DTSTART;TZID=Australia/Sydney:20270102T080000
-DTEND;TZID=Australia/Sydney:20270102T163000
-SUMMARY:☀️ Wards (A)
-DESCRIPTION:Emily is working: Wards
-END:VEVENT
-BEGIN:VEVENT
-UID:7bd91288-9b2c-54aa-bb61-91860a821a5d@isemilyworking
-DTSTART;TZID=Australia/Sydney:20270103T080000
-DTEND;TZID=Australia/Sydney:20270103T163000
 SUMMARY:☀️ Wards (A)
 DESCRIPTION:Emily is working: Wards
 END:VEVENT
@@ -1021,9 +986,9 @@ END:VEVENT
 BEGIN:VEVENT
 UID:6d5f155c-d7a9-5ae0-8e0e-485bf6acddbb@isemilyworking
 DTSTART;TZID=Australia/Sydney:20270112T080000
-DTEND;TZID=Australia/Sydney:20270112T210000
-SUMMARY:☀️ Long Day + Overtime (LD1)
-DESCRIPTION:Emily is working: Long Day + Overtime
+DTEND;TZID=Australia/Sydney:20270112T163000
+SUMMARY:☀️ Sick Cover / Back-up (SC)
+DESCRIPTION:Emily is working: Sick Cover / Back-up
 END:VEVENT
 BEGIN:VEVENT
 UID:1ad716d8-b52c-5a57-aa16-bb9b68402022@isemilyworking
@@ -1033,11 +998,18 @@ SUMMARY:☀️ Wards (A)
 DESCRIPTION:Emily is working: Wards
 END:VEVENT
 BEGIN:VEVENT
-UID:8618c93e-3f5b-5779-92d4-1ac8f065fff1@isemilyworking
-DTSTART;TZID=Australia/Sydney:20270115T080000
-DTEND;TZID=Australia/Sydney:20270115T163000
+UID:d8794122-00ca-5f8a-8ba4-c73103990e00@isemilyworking
+DTSTART;TZID=Australia/Sydney:20270114T080000
+DTEND;TZID=Australia/Sydney:20270114T163000
 SUMMARY:☀️ Wards (A)
 DESCRIPTION:Emily is working: Wards
+END:VEVENT
+BEGIN:VEVENT
+UID:8618c93e-3f5b-5779-92d4-1ac8f065fff1@isemilyworking
+DTSTART;TZID=Australia/Sydney:20270115T080000
+DTEND;TZID=Australia/Sydney:20270115T210000
+SUMMARY:☀️ Long Day + Overtime (LD1)
+DESCRIPTION:Emily is working: Long Day + Overtime
 END:VEVENT
 BEGIN:VEVENT
 UID:c0000c40-b48a-5f6e-b7ee-3e13281e9eb7@isemilyworking
@@ -1050,20 +1022,13 @@ BEGIN:VEVENT
 UID:3d93b4dc-de91-562b-98c1-e594b189ba62@isemilyworking
 DTSTART;TZID=Australia/Sydney:20270119T080000
 DTEND;TZID=Australia/Sydney:20270119T163000
-SUMMARY:☀️ Wards + On Call (OC)
-DESCRIPTION:Emily is working: Wards + On Call
+SUMMARY:☀️ Wards (A)
+DESCRIPTION:Emily is working: Wards
 END:VEVENT
 BEGIN:VEVENT
 UID:a30c51f6-9d79-51b8-8b95-c94482cd37bd@isemilyworking
 DTSTART;TZID=Australia/Sydney:20270120T080000
 DTEND;TZID=Australia/Sydney:20270120T163000
-SUMMARY:☀️ Wards (A)
-DESCRIPTION:Emily is working: Wards
-END:VEVENT
-BEGIN:VEVENT
-UID:05f651d1-3691-57d3-a2fe-aafed9a7d061@isemilyworking
-DTSTART;TZID=Australia/Sydney:20270121T080000
-DTEND;TZID=Australia/Sydney:20270121T163000
 SUMMARY:☀️ Wards (A)
 DESCRIPTION:Emily is working: Wards
 END:VEVENT
@@ -1078,15 +1043,15 @@ BEGIN:VEVENT
 UID:ee94ef91-8430-5841-a34f-20ec62d8e4cb@isemilyworking
 DTSTART;TZID=Australia/Sydney:20270123T080000
 DTEND;TZID=Australia/Sydney:20270123T210000
-SUMMARY:☀️ On Call then Wards (Weekend) (E)
-DESCRIPTION:Emily is working: On Call then Wards (Weekend)
+SUMMARY:☀️ On Call then Wards (E)
+DESCRIPTION:Emily is working: On Call then Wards
 END:VEVENT
 BEGIN:VEVENT
 UID:af9a943e-fd5f-5bbf-8cc3-aac5f4d18b34@isemilyworking
 DTSTART;TZID=Australia/Sydney:20270124T080000
 DTEND;TZID=Australia/Sydney:20270124T210000
-SUMMARY:☀️ On Call then Wards (Weekend) (E)
-DESCRIPTION:Emily is working: On Call then Wards (Weekend)
+SUMMARY:☀️ On Call then Wards (E)
+DESCRIPTION:Emily is working: On Call then Wards
 END:VEVENT
 BEGIN:VEVENT
 UID:801d4ef3-4b0b-5ac8-b26d-a78a709328c3@isemilyworking
@@ -1099,8 +1064,8 @@ BEGIN:VEVENT
 UID:c4ccec14-2887-52a4-9e7d-97057a17c2ae@isemilyworking
 DTSTART;TZID=Australia/Sydney:20270127T080000
 DTEND;TZID=Australia/Sydney:20270127T163000
-SUMMARY:☀️ Wards + On Call (OC)
-DESCRIPTION:Emily is working: Wards + On Call
+SUMMARY:☀️ Wards (A)
+DESCRIPTION:Emily is working: Wards
 END:VEVENT
 BEGIN:VEVENT
 UID:4e364bd2-eef2-52a6-bde0-2bade2f713b0@isemilyworking
